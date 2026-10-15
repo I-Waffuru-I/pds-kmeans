@@ -1,7 +1,11 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <vector>
 #include "CSVReader.hpp"
 #include "CSVWriter.hpp"
 #include "rng.h"
@@ -81,16 +85,20 @@ Arguments:
 	exit(-1);
 }
 
+struct DataSize {
+	size_t cols;
+	size_t rows;
+	DataSize(size_t r, size_t c): rows(r), cols(c){}
+};
+
 // Helper function to read input file into allData, setting number of detected
 // rows and columns. Feel free to use, adapt or ignore
-void readData(std::ifstream &input, std::vector<double> &allData, size_t &numRows, size_t &numCols)
+DataSize readData(std::ifstream &input, std::vector<double> &allData)
 {
 	if (!input.is_open())
 		throw std::runtime_error("Input file is not open");
 
 	allData.resize(0);
-	numRows = 0;
-	numCols = -1;
 
 	CSVReader inReader(input);
 	int numColsExpected = -1;
@@ -114,8 +122,7 @@ void readData(std::ifstream &input, std::vector<double> &allData, size_t &numRow
 		line++;
 	}
 
-	numRows = (size_t)allData.size()/numColsExpected;
-	numCols = (size_t)numColsExpected;
+	return DataSize((size_t)allData.size()/numColsExpected, (size_t)numColsExpected);
 }
 
 FileCSVWriter openDebugFile(const std::string &n)
@@ -129,6 +136,30 @@ FileCSVWriter openDebugFile(const std::string &n)
 			std::cerr << "WARNING: Unable to open debug file " << n << std::endl;
 	}
 	return f;
+}
+
+void initCentroids(Rng &rng, std::vector<double> &centroids, std::vector<double> &allData, DataSize &dsize){
+	size_t ccount = centroids.size() / dsize.cols;
+	std::vector<size_t> centroid_indices (ccount);
+	std::cout << "size: " << dsize.rows << ", " << dsize.cols << std::endl;
+	std::cout << "cluster count: " << ccount << std::endl;
+	rng.pickRandomIndices(dsize.rows, centroid_indices);
+	for (int i = 0; i < ccount; i++){
+		size_t row = centroid_indices[i];
+		for (int e = 0; e < dsize.cols; e++){
+			centroids[i*dsize.cols+e] = allData[row*dsize.cols+e];
+		}
+	}
+}
+
+void debugCentroids(std::vector<double> &centroids, DataSize &size){
+	std::cout << "debug centroid: " << std::endl;
+	for (int r = 0; r < centroids.size()/size.cols; r++){
+		for (int c = 0; c < size.cols; c++){
+			std::cout << centroids[r*size.cols + c] << ", ";
+		}
+		std::cout << std::endl;
+	}
 }
 
 int kmeans(Rng &rng, const std::string &inputFile, const std::string &outputFileName,
@@ -147,7 +178,17 @@ int kmeans(Rng &rng, const std::string &inputFile, const std::string &outputFile
 		return -1;
 	}
 
-	// TODO: load dataset
+
+	std::ifstream datasetFile;
+	datasetFile.open(inputFile);
+	if (!datasetFile.is_open())
+	{
+		std::cerr << "Unable to open input file " << inputFile << std::endl;
+		return -1;
+	}
+
+	std::vector<double> allData;
+	DataSize size = readData(datasetFile, allData);
 
 	// This is a basic timer from std::chrono ; feel free to use the appropriate timer for
 	// each of the technologies, e.g. OpenMP has omp_get_wtime()
@@ -162,11 +203,22 @@ int kmeans(Rng &rng, const std::string &inputFile, const std::string &outputFile
 	for (int r = 0 ; r < repetitions ; r++)
 	{
 		size_t numSteps = 0;
-        // TODO: perform an actual k-means run, starting from random centroids
-        //       (see rng.h)
-		std::cerr << "TODO: implement this" << std::endl;
+		  // TODO: perform an actual k-means run, starting from random centroids
+		  //       (see rng.h)
+		  // DOING
+		std::vector<double> centroids (numClusters * size.cols);
+		debugCentroids(centroids, size);
+		initCentroids(rng, centroids, allData, size);
+		debugCentroids(centroids, size);
 
 		stepsPerRepetition[r] = numSteps;
+
+		// bool changed = true;
+		// while (changed) {
+		//
+		//
+		//
+		// }
 
 		// Make sure debug logging is only done on first iteration ; subsequent checks
 		// with is_open will indicate that no logging needs to be done anymore.

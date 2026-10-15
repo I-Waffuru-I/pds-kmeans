@@ -9,10 +9,24 @@ FLAGS=-O3 -DNDEBUG -std=c++14
 # Settings for a debug build
 #FLAGS=-g -std=c++14
 
-all: kmeans
+BUILD = kmeans
+DATA = datasets
+OUTPUT = output
+
+all: build
 
 clean:
-	rm -f kmeans
+	rm -f $(BUILD)
+	rm -fr $(OUTPUT)
 
-kmeans: main_startcode.cpp rng.cpp
-	$(CXX) $(FLAGS) -o kmeans main_startcode.cpp rng.cpp
+build: main_startcode.cpp rng.cpp
+	$(CXX) $(FLAGS) -o $(BUILD) main_startcode.cpp rng.cpp
+
+run: build
+	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
+		--output $(OUTPUT)/output.csv \
+		--repetitions 1   --k 3 \
+		--centroidtrace $(OUTPUT)/centroidtrace.csv \
+		--trace $(OUTPUT)/clustertrace.csv --seed 1338
+
+
