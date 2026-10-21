@@ -191,16 +191,18 @@ void naiveClustering(std::vector<double> &centroids,
   changed = false;
   // We gaan per dimentie hoveelheid de punten af
   double sumSquaredDist = 0;
-  for (size_t i = 0; i < size.rows; i++) {
+
+	// AutoAverageTimer timer("inner loop");
+  for (size_t i = 0; i < size.rows; ++i) {
     double minDist = std::numeric_limits<double>::max(); // can only get better
     int cIndex = size.cols + 1;
     // We moeten ook de cI traverseren per cols
-    for (int cI = 0; cI < centroidNumber; cI++) {
+    for (size_t cI = 0; cI < centroidNumber; ++cI) {
       double dist = 0;
       // Alle punten afgaan van alle dimenties
       // std::cout << "Point: ";
 
-      for (int c = 0; c < size.cols; c++) {
+      for (size_t c = 0; c < size.cols; c++) {
         // std::cout << allData[c+i] << " , ";
         dist += std::pow(
             (allData[i * size.cols + c] - centroids[cI * size.cols + c]), 2);
@@ -245,6 +247,8 @@ void naiveClustering(std::vector<double> &centroids,
     // std::endl;
   }
 
+	// AutoAverageTimer timer("centroid sum");
+	// timer.start();
   for (size_t i = 0; i < centroidNumber; i++) {
     // std::cout << "Centroid " << i << ":";
     // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
@@ -254,7 +258,10 @@ void naiveClustering(std::vector<double> &centroids,
       centroids[i * size.cols + p] =
           centroidMap[i][p] / centroidMap[i][size.cols];
     }
+
+	// timer.stop();
   }
+	// timer.stop();
 }
 
 int kmeans(Rng &rng, const std::string &inputFile,
@@ -326,6 +333,7 @@ int kmeans(Rng &rng, const std::string &inputFile,
     // They already seem to get randomly initialized
     initCentroids(rng, centroids, allData, size);
     // debugCentroids(centroids, size);
+		centroidDebugFile.write(centroids, size.cols);
 
     bool changed = true;
     while (changed) {
