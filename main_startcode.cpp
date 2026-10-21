@@ -10,6 +10,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -170,58 +171,90 @@ void debugCentroids(std::vector<double> &centroids, DataSize &size) {
   }
 }
 
+void debugCentroidPoints(std::vector<int> &pCentroid) {
+  std::cout << "Debug centroid points" << std::endl;
+  for (int r = 0; r < pCentroid.size(); r++) {
+    std::cout << pCentroid[r] << ",";
+  }
+  std::cout << std::endl;
+}
+
 void naiveClustering(std::vector<double> &centroids,
-                     std::vector<double> &allData, DataSize &size) {
-	int centroidNumber = centroids.size() / size.cols;
-	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van de dimentie eruit halen
+                     std::vector<double> &allData, std::vector<int> &cPoints,
+                     double &avgDist, DataSize &size, bool &changed) {
+  int centroidNumber = centroids.size() / size.cols;
+  // We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+  // de dimentie eruit halen
   std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-	// We gaan per dimentie hoveelheid de punten af
-  for (size_t i = 0; i < allData.size() - 1; i = i + size.cols) {
-		double minDist = std::numeric_limits<double>::max(); // can only get better
-		int cIndex = size.cols + 1;
-		// We moeten ook de cI traverseren per cols
-    for (int cI = 0; cI < centroids.size(); cI = cI + size.cols) {
-			double dist = 0;
-			// Alle punten afgaan van alle dimenties
-			// std::cout << "Point: ";
+
+  // We zetten ook eerst changed op false
+  changed = false;
+  // We gaan per dimentie hoveelheid de punten af
+  double sumSquaredDist = 0;
+  for (size_t i = 0; i < size.rows; i++) {
+    double minDist = std::numeric_limits<double>::max(); // can only get better
+    int cIndex = size.cols + 1;
+    // We moeten ook de cI traverseren per cols
+    for (int cI = 0; cI < centroidNumber; cI++) {
+      double dist = 0;
+      // Alle punten afgaan van alle dimenties
+      // std::cout << "Point: ";
 
       for (int c = 0; c < size.cols; c++) {
-				// std::cout << allData[c+i] << " , ";
-				dist += std::pow((allData[c + i] - centroids[c + cI]), 2 );
+        // std::cout << allData[c+i] << " , ";
+        dist += std::pow(
+            (allData[i * size.cols + c] - centroids[cI * size.cols + c]), 2);
       }
 
-			// std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " << dist << std::endl;
+      // std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
+      // dist << std::endl;
 
-			// Check if is smaller than smallest distance
-			if(dist < minDist){
-				minDist = dist;
-				// We delen hier door het aantal dimenties om eruit te halen op welke index we zitten
-				cIndex = cI / size.cols;
-			}
+      // Check if is smaller than smallest distance
+      if (dist < minDist) {
+        minDist = dist;
+        // We delen hier door het aantal dimenties om eruit te halen op welke
+        // index we zitten
+        cIndex = cI;
+
+        // Som van squareddist
+        avgDist += minDist / size.rows;
+      }
     }
 
-		// Voeg hier het punt aan de juiste cluster toe via de map
-		// Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere op basis van hun dimentie
-		// En dan achteraf delen door het aantal punten dat hier eigenlijk in zat?
-		// We moeten de vector dan wel een vaste grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
-		// centroidMap[cIndex].push_back(i);
+    // Voeg hier het punt aan de juiste cluster toe via de map
+    // Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
+    // op basis van hun dimentie En dan achteraf delen door het aantal punten
+    // dat hier eigenlijk in zat? We moeten de vector dan wel een vaste grootte
+    // geven van cols + 1 => de +1 voor het aantal punten mee te geven
+    // centroidMap[cIndex].push_back(i);
 
-		centroidMap[cIndex].resize(size.cols + 1);
-		for (int c = 0; c < size.cols; c++) {
-			// std::cout << allData[c+i] << " , ";
-			centroidMap[cIndex][c] += allData[i + c];
-		}
-		centroidMap[cIndex][size.cols] += 1;
-		std::cout << "CIndex: " << cIndex << " Distance: " << minDist << std::endl;
+    int pointIndex = i;
+    if (cPoints[pointIndex] != cIndex) {
+      changed = true;
+      cPoints[pointIndex] = cIndex;
+      // std::cout << "Changed point" << std::endl;
+    }
 
+    centroidMap[cIndex].resize(size.cols + 1);
+    for (int c = 0; c < size.cols; c++) {
+      // std::cout << allData[c+i] << " , ";
+      centroidMap[cIndex][c] += allData[i * size.cols + c];
+    }
+    centroidMap[cIndex][size.cols] += 1;
+    // std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
+    // std::endl;
   }
 
-	for(size_t i = 0; i < centroidNumber; i++){
-		for (size_t p = 0; p < size.cols; p++){
-			// Total sum divided by total amount of points
-			centroids[i + p] = centroidMap[i][p] / centroidMap[i][size.cols];
-		}
-	}
+  for (size_t i = 0; i < centroidNumber; i++) {
+    // std::cout << "Centroid " << i << ":";
+    // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+    // std::endl;
+    for (size_t p = 0; p < size.cols; p++) {
+      // Total sum divided by total amount of points
+      centroids[i * size.cols + p] =
+          centroidMap[i][p] / centroidMap[i][size.cols];
+    }
+  }
 }
 
 int kmeans(Rng &rng, const std::string &inputFile,
@@ -271,32 +304,57 @@ int kmeans(Rng &rng, const std::string &inputFile,
 
   double bestDistSquaredSum =
       std::numeric_limits<double>::max(); // can only get better
+  std::vector<int> bestCluster(size.rows);
   std::vector<size_t> stepsPerRepetition(
       repetitions); // to save the number of steps each rep needed
 
   // We calculate the min and max bounds so we can more efficiëntly set up the
   // random centroids
   std::vector<double> centroids(numClusters * size.cols);
-  auto max = *std::max_element(allData.begin(), allData.end());
-  auto min = *std::min_element(allData.begin(), allData.end());
-  printf("Max number is %f", max);
+  std::vector<double> oldCentroids(numClusters * size.cols);
+
+  // Also a list to keep track of which points where assigned to what centroid
+  std::vector<int> pointsCentroid(size.rows);
+  pointsCentroid.assign(allData.size() / size.cols, -1);
   // Do the k-means routine a number of times, each time starting from
   // different random centroids (use Rng::pickRandomIndices), and keep
   // the best result of these repetitions.
   for (int r = 0; r < repetitions; r++) {
     size_t numSteps = 0;
-    // TODO: perform an actual k-means run, starting from random centroids
-    //       (see rng.h)
-    // DOING
 
-    debugCentroids(centroids, size);
+    // debugCentroids(centroids, size);
     // They already seem to get randomly initialized
     initCentroids(rng, centroids, allData, size);
-    debugCentroids(centroids, size);
+    // debugCentroids(centroids, size);
 
-    naiveClustering(centroids, allData, size);
+    bool changed = true;
+    while (changed) {
+      // debugCentroidPoints(pointsCentroid);
 
-    debugCentroids(centroids, size);
+      // oldCentroids = centroids;
+
+      double avgDist = 0;
+      // std::cout << "Before" << std::endl;
+      // debugCentroids(centroids, size);
+      naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
+                      changed);
+
+      // std::cout << "After" << std::endl;
+      // debugCentroids(centroids, size);
+
+      // std::cout << "Old" << std::endl;
+      // debugCentroids(oldCentroids, size);
+
+      // Write all centroids to file:
+      centroidDebugFile.write(centroids, size.cols);
+      clustersDebugFile.write(pointsCentroid, size.rows);
+      numSteps++;
+
+      if (avgDist < bestDistSquaredSum) {
+        bestDistSquaredSum = avgDist;
+        bestCluster = pointsCentroid;
+      }
+    }
 
     stepsPerRepetition[r] = numSteps;
 
@@ -331,7 +389,8 @@ int kmeans(Rng &rng, const std::string &inputFile,
   // involved
   csvOutputFile.write(stepsPerRepetition, "# Steps: ");
   // Write best clusters to csvOutputFile, something like
-  // csvOutputFile.write( best cluster indices )
+  csvOutputFile.write(bestCluster);
+
   return 0;
 }
 
@@ -341,7 +400,7 @@ int mainCxx(const std::vector<std::string> &args) {
 
   std::string inputFileName, outputFileName, centroidTraceFileName,
       clusterTraceFileName;
-  unsigned long seed = 0;
+  unsigned long seed = 54030599202;
 
   int numClusters = -1, repetitions = -1;
   int numBlocks = 1, numThreads = 1;

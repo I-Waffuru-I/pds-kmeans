@@ -25,8 +25,13 @@ build: main_startcode.cpp rng.cpp
 run: build
 	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
 		--output $(OUTPUT)/output.csv \
-		--repetitions 1   --k 3 \
-		--centroidtrace $(OUTPUT)/centroidtrace.csv \
-		--trace $(OUTPUT)/clustertrace.csv --seed 1338
+		--repetitions 4   --k 3 \
+		--seed 2507953
 
+debug: build
+	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
+		--output $(OUTPUT)/output.csv \
+		--repetitions 4   --k 3 \
+		--centroidtrace $(OUTPUT)/centroidtrace.csv \
+		--trace $(OUTPUT)/clustertrace.csv --seed 2507953
 
