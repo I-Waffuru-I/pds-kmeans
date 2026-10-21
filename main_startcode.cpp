@@ -1,19 +1,28 @@
-#include <algorithm>
-#include <cstddef>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cstdlib>
-#include <vector>
 #include "CSVReader.hpp"
 #include "CSVWriter.hpp"
 #include "rng.h"
 #include "timer.h"
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-void usage()
-{
-	std::cerr << R"XYZ(
+#include <filesystem>
+
+// Ik zag dat is gebruikt worden deze structuur en wat dat eens proberen
+// filesystem is blijkbaar pas geïntroduceerd vanaf cpp17 dus dat pas ik even
+// aan
+namespace fs = std::filesystem;
+
+void usage() {
+  std::cerr << R"XYZ(
 Usage:
 
   kmeans --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--blocks numblocks] [--threads numthreads] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
@@ -82,217 +91,300 @@ Arguments:
    'visualize_centroids.py' can be used to visualize how the centroids change.
    
 )XYZ";
-	exit(-1);
+  exit(-1);
 }
 
 struct DataSize {
-	size_t cols;
-	size_t rows;
-	DataSize(size_t r, size_t c): rows(r), cols(c){}
+  size_t cols;
+  size_t rows;
+  DataSize(size_t r, size_t c) : rows(r), cols(c) {}
 };
 
 // Helper function to read input file into allData, setting number of detected
 // rows and columns. Feel free to use, adapt or ignore
-DataSize readData(std::ifstream &input, std::vector<double> &allData)
-{
-	if (!input.is_open())
-		throw std::runtime_error("Input file is not open");
+DataSize readData(std::ifstream &input, std::vector<double> &allData) {
+  if (!input.is_open())
+    throw std::runtime_error("Input file is not open");
 
-	allData.resize(0);
+  allData.resize(0);
 
-	CSVReader inReader(input);
-	int numColsExpected = -1;
-	int line = 1;
-	std::vector<double> row;
+  CSVReader inReader(input);
+  int numColsExpected = -1;
+  int line = 1;
+  std::vector<double> row;
 
-	while (inReader.read(row))
-	{
-		if (numColsExpected == -1)
-		{
-			numColsExpected = row.size();
-			if (numColsExpected <= 0)
-				throw std::runtime_error("Unexpected error: 0 columns");
+  while (inReader.read(row)) {
+    if (numColsExpected == -1) {
+      numColsExpected = row.size();
+      if (numColsExpected <= 0)
+        throw std::runtime_error("Unexpected error: 0 columns");
+    } else if (numColsExpected != (int)row.size())
+      throw std::runtime_error("Incompatible number of colums read in line " +
+                               std::to_string(line) + ": expecting " +
+                               std::to_string(numColsExpected) + " but got " +
+                               std::to_string(row.size()));
+
+    for (auto x : row)
+      allData.push_back(x);
+
+    line++;
+  }
+
+  return DataSize((size_t)allData.size() / numColsExpected,
+                  (size_t)numColsExpected);
+}
+
+FileCSVWriter openDebugFile(const std::string &n) {
+  FileCSVWriter f;
+
+  if (n.length() != 0) {
+    f.open(n);
+    if (!f.is_open())
+      std::cerr << "WARNING: Unable to open debug file " << n << std::endl;
+  }
+  return f;
+}
+
+void initCentroids(Rng &rng, std::vector<double> &centroids,
+                   std::vector<double> &allData, DataSize &dsize) {
+  size_t ccount = centroids.size() / dsize.cols;
+  std::vector<size_t> centroid_indices(ccount);
+  std::cout << "size: " << dsize.rows << ", " << dsize.cols << std::endl;
+  std::cout << "cluster count: " << ccount << std::endl;
+  rng.pickRandomIndices(dsize.rows, centroid_indices);
+  for (int i = 0; i < ccount; i++) {
+    size_t row = centroid_indices[i];
+    for (int e = 0; e < dsize.cols; e++) {
+      centroids[i * dsize.cols + e] = allData[row * dsize.cols + e];
+    }
+  }
+}
+
+void debugCentroids(std::vector<double> &centroids, DataSize &size) {
+  std::cout << "debug centroid: " << std::endl;
+  for (int r = 0; r < centroids.size() / size.cols; r++) {
+    for (int c = 0; c < size.cols; c++) {
+      std::cout << centroids[r * size.cols + c] << ", ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+void naiveClustering(std::vector<double> &centroids,
+                     std::vector<double> &allData, DataSize &size) {
+	int centroidNumber = centroids.size() / size.cols;
+	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van de dimentie eruit halen
+  std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+	// We gaan per dimentie hoveelheid de punten af
+  for (size_t i = 0; i < allData.size() - 1; i = i + size.cols) {
+		double minDist = std::numeric_limits<double>::max(); // can only get better
+		int cIndex = size.cols + 1;
+		// We moeten ook de cI traverseren per cols
+    for (int cI = 0; cI < centroids.size(); cI = cI + size.cols) {
+			double dist = 0;
+			// Alle punten afgaan van alle dimenties
+			// std::cout << "Point: ";
+
+      for (int c = 0; c < size.cols; c++) {
+				// std::cout << allData[c+i] << " , ";
+				dist += std::pow((allData[c + i] - centroids[c + cI]), 2 );
+      }
+
+			// std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " << dist << std::endl;
+
+			// Check if is smaller than smallest distance
+			if(dist < minDist){
+				minDist = dist;
+				// We delen hier door het aantal dimenties om eruit te halen op welke index we zitten
+				cIndex = cI / size.cols;
+			}
+    }
+
+		// Voeg hier het punt aan de juiste cluster toe via de map
+		// Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere op basis van hun dimentie
+		// En dan achteraf delen door het aantal punten dat hier eigenlijk in zat?
+		// We moeten de vector dan wel een vaste grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
+		// centroidMap[cIndex].push_back(i);
+
+		centroidMap[cIndex].resize(size.cols + 1);
+		for (int c = 0; c < size.cols; c++) {
+			// std::cout << allData[c+i] << " , ";
+			centroidMap[cIndex][c] += allData[i + c];
 		}
-		else if (numColsExpected != (int)row.size())
-			throw std::runtime_error("Incompatible number of colums read in line " + std::to_string(line) + ": expecting " + std::to_string(numColsExpected) + " but got " + std::to_string(row.size()));
+		centroidMap[cIndex][size.cols] += 1;
+		std::cout << "CIndex: " << cIndex << " Distance: " << minDist << std::endl;
 
-		for (auto x : row)
-			allData.push_back(x);
+  }
 
-		line++;
-	}
-
-	return DataSize((size_t)allData.size()/numColsExpected, (size_t)numColsExpected);
-}
-
-FileCSVWriter openDebugFile(const std::string &n)
-{
-	FileCSVWriter f;
-
-	if (n.length() != 0)
-	{
-		f.open(n);
-		if (!f.is_open())
-			std::cerr << "WARNING: Unable to open debug file " << n << std::endl;
-	}
-	return f;
-}
-
-void initCentroids(Rng &rng, std::vector<double> &centroids, std::vector<double> &allData, DataSize &dsize){
-	size_t ccount = centroids.size() / dsize.cols;
-	std::vector<size_t> centroid_indices (ccount);
-	std::cout << "size: " << dsize.rows << ", " << dsize.cols << std::endl;
-	std::cout << "cluster count: " << ccount << std::endl;
-	rng.pickRandomIndices(dsize.rows, centroid_indices);
-	for (int i = 0; i < ccount; i++){
-		size_t row = centroid_indices[i];
-		for (int e = 0; e < dsize.cols; e++){
-			centroids[i*dsize.cols+e] = allData[row*dsize.cols+e];
-		}
-	}
-}
-
-void debugCentroids(std::vector<double> &centroids, DataSize &size){
-	std::cout << "debug centroid: " << std::endl;
-	for (int r = 0; r < centroids.size()/size.cols; r++){
-		for (int c = 0; c < size.cols; c++){
-			std::cout << centroids[r*size.cols + c] << ", ";
-		}
-		std::cout << std::endl;
-	}
-}
-
-int kmeans(Rng &rng, const std::string &inputFile, const std::string &outputFileName,
-           int numClusters, int repetitions, int numBlocks, int numThreads,
-           const std::string &centroidDebugFileName, const std::string &clusterDebugFileName)
-{
-	// If debug filenames are specified, this opens them. The is_open method
-	// can be used to check if they are actually open and should be written to.
-	FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
-	FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
-
-	FileCSVWriter csvOutputFile(outputFileName);
-	if (!csvOutputFile.is_open())
-	{
-		std::cerr << "Unable to open output file " << outputFileName << std::endl;
-		return -1;
-	}
-
-
-	std::ifstream datasetFile;
-	datasetFile.open(inputFile);
-	if (!datasetFile.is_open())
-	{
-		std::cerr << "Unable to open input file " << inputFile << std::endl;
-		return -1;
-	}
-
-	std::vector<double> allData;
-	DataSize size = readData(datasetFile, allData);
-
-	// This is a basic timer from std::chrono ; feel free to use the appropriate timer for
-	// each of the technologies, e.g. OpenMP has omp_get_wtime()
-	Timer timer;
-
-	double bestDistSquaredSum = std::numeric_limits<double>::max(); // can only get better
-	std::vector<size_t> stepsPerRepetition(repetitions); // to save the number of steps each rep needed
-
-    // Do the k-means routine a number of times, each time starting from
-    // different random centroids (use Rng::pickRandomIndices), and keep 
-    // the best result of these repetitions.
-	for (int r = 0 ; r < repetitions ; r++)
-	{
-		size_t numSteps = 0;
-		  // TODO: perform an actual k-means run, starting from random centroids
-		  //       (see rng.h)
-		  // DOING
-		std::vector<double> centroids (numClusters * size.cols);
-		debugCentroids(centroids, size);
-		initCentroids(rng, centroids, allData, size);
-		debugCentroids(centroids, size);
-
-		stepsPerRepetition[r] = numSteps;
-
-		// bool changed = true;
-		// while (changed) {
-		//
-		//
-		//
-		// }
-
-		// Make sure debug logging is only done on first iteration ; subsequent checks
-		// with is_open will indicate that no logging needs to be done anymore.
-		centroidDebugFile.close();
-		clustersDebugFile.close();
-	}
-
-	timer.stop();
-
-	// Some example output, of course you can log your timing data anyway you like.
-	std::cerr << "# Type,blocks,threads,file,seed,clusters,repetitions,bestdistsquared,timeinseconds" << std::endl;
-	std::cout << "sequential," << numBlocks << "," << numThreads << "," << inputFile << "," 
-			  << rng.getUsedSeed() << "," << numClusters << ","
-		      << repetitions << "," << bestDistSquaredSum << "," << timer.durationNanoSeconds()/1e9
-			  << std::endl;
-
-	// Write the number of steps per repetition, kind of a signature of the work involved
-	csvOutputFile.write(stepsPerRepetition, "# Steps: ");
-	// Write best clusters to csvOutputFile, something like
-	// csvOutputFile.write( best cluster indices )
-	return 0;
-}
-
-int mainCxx(const std::vector<std::string> &args)
-{
-	if (args.size()%2 != 0)
-		usage();
-
-	std::string inputFileName, outputFileName, centroidTraceFileName, clusterTraceFileName;
-	unsigned long seed = 0;
-
-	int numClusters = -1, repetitions = -1;
-	int numBlocks = 1, numThreads = 1;
-	for (int i = 0 ; i < args.size() ; i += 2)
-	{
-		if (args[i] == "--input")
-			inputFileName = args[i+1];
-		else if (args[i] == "--output")
-			outputFileName = args[i+1];
-		else if (args[i] == "--centroidtrace")
-			centroidTraceFileName = args[i+1];
-		else if (args[i] == "--trace")
-			clusterTraceFileName = args[i+1];
-		else if (args[i] == "--k")
-			numClusters = stoi(args[i+1]);
-		else if (args[i] == "--repetitions")
-			repetitions = stoi(args[i+1]);
-		else if (args[i] == "--seed")
-			seed = stoul(args[i+1]);
-		else if (args[i] == "--blocks")
-			numBlocks = stoi(args[i+1]);
-		else if (args[i] == "--threads")
-			numThreads = stoi(args[i+1]);
-		else
-		{
-			std::cerr << "Unknown argument '" << args[i] << "'" << std::endl;
-			return -1;
+	for(size_t i = 0; i < centroidNumber; i++){
+		for (size_t p = 0; p < size.cols; p++){
+			// Total sum divided by total amount of points
+			centroids[i + p] = centroidMap[i][p] / centroidMap[i][size.cols];
 		}
 	}
-
-	if (inputFileName.length() == 0 || outputFileName.length() == 0 || numClusters < 1 || repetitions < 1 || seed == 0)
-		usage();
-
-	Rng rng(seed);
-
-	return kmeans(rng, inputFileName, outputFileName, numClusters, repetitions,
-			      numBlocks, numThreads, centroidTraceFileName, clusterTraceFileName);
 }
 
-int main(int argc, char *argv[])
-{
-	std::vector<std::string> args;
-	for (int i = 1 ; i < argc ; i++)
-		args.push_back(argv[i]);
+int kmeans(Rng &rng, const std::string &inputFile,
+           const std::string &outputFileName, int numClusters, int repetitions,
+           int numBlocks, int numThreads,
+           const std::string &centroidDebugFileName,
+           const std::string &clusterDebugFileName) {
+  // If debug filenames are specified, this opens them. The is_open method
+  // can be used to check if they are actually open and should be written to.
+  FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
+  FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
 
-	return mainCxx(args);
+  // Ik had een probleem eerst dat als de output/ dir nog niet bestaat het
+  // programma niet wilt werken. Dus we zullen eerst checken of de map er is en
+  // deze aanmaken indien nodig
+
+  try {
+    fs::path dirPath = fs::path(outputFileName).parent_path();
+    if (fs::create_directories(dirPath)) {
+      std::cout << "Created new directory" << std::endl;
+    } else {
+      std::cout << "Directory already exists" << std::endl;
+    }
+  } catch (std::exception e) {
+    throw e;
+  }
+
+  FileCSVWriter csvOutputFile(outputFileName);
+  if (!csvOutputFile.is_open()) {
+    std::cerr << "Unable to open output file " << outputFileName << std::endl;
+    return -1;
+  }
+
+  std::ifstream datasetFile;
+  datasetFile.open(inputFile);
+  if (!datasetFile.is_open()) {
+    std::cerr << "Unable to open input file " << inputFile << std::endl;
+    return -1;
+  }
+
+  std::vector<double> allData;
+  DataSize size = readData(datasetFile, allData);
+
+  // This is a basic timer from std::chrono ; feel free to use the appropriate
+  // timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
+  Timer timer;
+
+  double bestDistSquaredSum =
+      std::numeric_limits<double>::max(); // can only get better
+  std::vector<size_t> stepsPerRepetition(
+      repetitions); // to save the number of steps each rep needed
+
+  // We calculate the min and max bounds so we can more efficiëntly set up the
+  // random centroids
+  std::vector<double> centroids(numClusters * size.cols);
+  auto max = *std::max_element(allData.begin(), allData.end());
+  auto min = *std::min_element(allData.begin(), allData.end());
+  printf("Max number is %f", max);
+  // Do the k-means routine a number of times, each time starting from
+  // different random centroids (use Rng::pickRandomIndices), and keep
+  // the best result of these repetitions.
+  for (int r = 0; r < repetitions; r++) {
+    size_t numSteps = 0;
+    // TODO: perform an actual k-means run, starting from random centroids
+    //       (see rng.h)
+    // DOING
+
+    debugCentroids(centroids, size);
+    // They already seem to get randomly initialized
+    initCentroids(rng, centroids, allData, size);
+    debugCentroids(centroids, size);
+
+    naiveClustering(centroids, allData, size);
+
+    debugCentroids(centroids, size);
+
+    stepsPerRepetition[r] = numSteps;
+
+    // bool changed = true;
+    // while (changed) {
+    //
+    //
+    //
+    // }
+
+    // Make sure debug logging is only done on first iteration ; subsequent
+    // checks with is_open will indicate that no logging needs to be done
+    // anymore.
+    centroidDebugFile.close();
+    clustersDebugFile.close();
+  }
+
+  timer.stop();
+
+  // Some example output, of course you can log your timing data anyway you
+  // like.
+  std::cerr << "# "
+               "Type,blocks,threads,file,seed,clusters,repetitions,"
+               "bestdistsquared,timeinseconds"
+            << std::endl;
+  std::cout << "sequential," << numBlocks << "," << numThreads << ","
+            << inputFile << "," << rng.getUsedSeed() << "," << numClusters
+            << "," << repetitions << "," << bestDistSquaredSum << ","
+            << timer.durationNanoSeconds() / 1e9 << std::endl;
+
+  // Write the number of steps per repetition, kind of a signature of the work
+  // involved
+  csvOutputFile.write(stepsPerRepetition, "# Steps: ");
+  // Write best clusters to csvOutputFile, something like
+  // csvOutputFile.write( best cluster indices )
+  return 0;
+}
+
+int mainCxx(const std::vector<std::string> &args) {
+  if (args.size() % 2 != 0)
+    usage();
+
+  std::string inputFileName, outputFileName, centroidTraceFileName,
+      clusterTraceFileName;
+  unsigned long seed = 0;
+
+  int numClusters = -1, repetitions = -1;
+  int numBlocks = 1, numThreads = 1;
+  for (int i = 0; i < args.size(); i += 2) {
+    if (args[i] == "--input")
+      inputFileName = args[i + 1];
+    else if (args[i] == "--output")
+      outputFileName = args[i + 1];
+    else if (args[i] == "--centroidtrace")
+      centroidTraceFileName = args[i + 1];
+    else if (args[i] == "--trace")
+      clusterTraceFileName = args[i + 1];
+    else if (args[i] == "--k")
+      numClusters = stoi(args[i + 1]);
+    else if (args[i] == "--repetitions")
+      repetitions = stoi(args[i + 1]);
+    else if (args[i] == "--seed")
+      seed = stoul(args[i + 1]);
+    else if (args[i] == "--blocks")
+      numBlocks = stoi(args[i + 1]);
+    else if (args[i] == "--threads")
+      numThreads = stoi(args[i + 1]);
+    else {
+      std::cerr << "Unknown argument '" << args[i] << "'" << std::endl;
+      return -1;
+    }
+  }
+
+  if (inputFileName.length() == 0 || outputFileName.length() == 0 ||
+      numClusters < 1 || repetitions < 1 || seed == 0)
+    usage();
+
+  Rng rng(seed);
+
+  return kmeans(rng, inputFileName, outputFileName, numClusters, repetitions,
+                numBlocks, numThreads, centroidTraceFileName,
+                clusterTraceFileName);
+}
+
+int main(int argc, char *argv[]) {
+  std::vector<std::string> args;
+  for (int i = 1; i < argc; i++)
+    args.push_back(argv[i]);
+
+  return mainCxx(args);
 }
