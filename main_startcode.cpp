@@ -192,7 +192,7 @@ void naiveClustering(std::vector<double> &centroids,
   // We gaan per dimentie hoveelheid de punten af
   double sumSquaredDist = 0;
 
-	// AutoAverageTimer timer("inner loop");
+  // AutoAverageTimer timer("inner loop");
   for (size_t i = 0; i < size.rows; ++i) {
     double minDist = std::numeric_limits<double>::max(); // can only get better
     int cIndex = size.cols + 1;
@@ -247,8 +247,8 @@ void naiveClustering(std::vector<double> &centroids,
     // std::endl;
   }
 
-	// AutoAverageTimer timer("centroid sum");
-	// timer.start();
+  // AutoAverageTimer timer("centroid sum");
+  // timer.start();
   for (size_t i = 0; i < centroidNumber; i++) {
     // std::cout << "Centroid " << i << ":";
     // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
@@ -259,9 +259,9 @@ void naiveClustering(std::vector<double> &centroids,
           centroidMap[i][p] / centroidMap[i][size.cols];
     }
 
-	// timer.stop();
+    // timer.stop();
   }
-	// timer.stop();
+  // timer.stop();
 }
 
 int kmeans(Rng &rng, const std::string &inputFile,
@@ -269,6 +269,7 @@ int kmeans(Rng &rng, const std::string &inputFile,
            int numBlocks, int numThreads,
            const std::string &centroidDebugFileName,
            const std::string &clusterDebugFileName) {
+
   // If debug filenames are specified, this opens them. The is_open method
   // can be used to check if they are actually open and should be written to.
   FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
@@ -278,15 +279,19 @@ int kmeans(Rng &rng, const std::string &inputFile,
   // programma niet wilt werken. Dus we zullen eerst checken of de map er is en
   // deze aanmaken indien nodig
 
+  fs::path dirPath;
+
   try {
-    fs::path dirPath = fs::path(outputFileName).parent_path();
+    dirPath = fs::path(outputFileName).parent_path();
     if (fs::create_directories(dirPath)) {
       std::cout << "Created new directory" << std::endl;
     } else {
       std::cout << "Directory already exists" << std::endl;
     }
   } catch (std::exception e) {
-    throw e;
+
+    std::cout << e.what() << std::endl;
+    // throw e;
   }
 
   FileCSVWriter csvOutputFile(outputFileName);
@@ -333,15 +338,19 @@ int kmeans(Rng &rng, const std::string &inputFile,
     // They already seem to get randomly initialized
     initCentroids(rng, centroids, allData, size);
     // debugCentroids(centroids, size);
-		centroidDebugFile.write(centroids, size.cols);
+    centroidDebugFile.write(centroids, size.cols);
 
+    AutoAverageTimer timer("time naïve clustering");
+    timer.start();
     bool changed = true;
+
+    double avgDist = 0;
     while (changed) {
+      avgDist = 0;
       // debugCentroidPoints(pointsCentroid);
 
       // oldCentroids = centroids;
 
-      double avgDist = 0;
       // std::cout << "Before" << std::endl;
       // debugCentroids(centroids, size);
       naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
@@ -354,16 +363,28 @@ int kmeans(Rng &rng, const std::string &inputFile,
       // debugCentroids(oldCentroids, size);
 
       // Write all centroids to file:
-      centroidDebugFile.write(centroids, size.cols);
-      clustersDebugFile.write(pointsCentroid, size.rows);
-      numSteps++;
+      if (changed) {
 
-      if (avgDist < bestDistSquaredSum) {
-        bestDistSquaredSum = avgDist;
-        bestCluster = pointsCentroid;
+        centroidDebugFile.write(centroids, size.cols);
       }
+			// Om een of andere reden moet dit er wel uit blijven en nog een keer geschreven worden
+        clustersDebugFile.write(pointsCentroid, size.rows);
+
+      numSteps++;
+    }
+    // std::cout << "Best dist: " << bestDistSquaredSum
+    //           << " | avgDist: " << avgDist << std::endl;
+    // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd gekeken
+    // naar aparte iteraties in de iteraties en het eindresultaat dus niet
+    // overeenkwam.
+    if (avgDist < bestDistSquaredSum) {
+      // std::cout << "Chose repetition: " << r << std::endl;
+
+      bestDistSquaredSum = avgDist;
+      bestCluster = pointsCentroid;
     }
 
+    timer.stop();
     stepsPerRepetition[r] = numSteps;
 
     // bool changed = true;

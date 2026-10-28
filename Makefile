@@ -25,7 +25,7 @@ build: main_startcode.cpp rng.cpp
 run: build
 	./$(BUILD) --input $(DATA)/100000x5.csv \
 		--output $(OUTPUT)/output.csv \
-		--repetitions 20   --k 10 \
+		--repetitions 1   --k 10 \
 		--seed 1337
 
 # debug: build
