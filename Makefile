@@ -6,12 +6,15 @@
 # Settings for optimized build
 FLAGS=-O3 -DNDEBUG -std=c++17 -march=native -mtune=native
 
+
 # Settings for a debug build
 #FLAGS=-g -std=c++14
 
 BUILD = kmeans
 DATA = datasets
 OUTPUT = output
+
+ARGS ?=
 
 all: build
 
@@ -20,10 +23,8 @@ clean:
 	rm -fr $(OUTPUT)
 
 build: main_startcode.cpp rng.cpp
-	$(CXX) $(FLAGS) -o $(BUILD) main_startcode.cpp rng.cpp
+	$(CXX) $(FLAGS) $(ARGS) -o $(BUILD) main_startcode.cpp rng.cpp
 
-build omp: main_startcode.cpp rng.cpp
-	$(CXX) $(FLAGS) -fopenmp -o $(BUILD) main_startcode.cpp rng.cpp
 
 run: build
 	./$(BUILD) --input $(DATA)/100000x5.csv \
@@ -31,18 +32,9 @@ run: build
 		--repetitions 1   --k 10 \
 		--seed 1337
 
-run omp: build omp
-	./$(BUILD) --input $(DATA)/100000x5.csv \
-		--output $(OUTPUT)/output.csv \
-		--repetitions 1   --k 10 \
-		--seed 1337
-debug omp: build omp
-	./$(BUILD) --input $(DATA)/100000x5.csv \
-		--output $(OUTPUT)/output.csv \
-		--trace $(OUTPUT)/clustertrace.csv \
-		--centroidtrace $(OUTPUT)/centroidtrace.csv \
-		--repetitions 10   --k 10 \
-		--seed 2507953
+omp: FLAGS += -fopenmp
+
+
 # debug: build
 # 	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
 # 		--output $(OUTPUT)/output.csv \
