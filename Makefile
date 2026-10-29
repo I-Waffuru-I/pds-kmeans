@@ -22,12 +22,27 @@ clean:
 build: main_startcode.cpp rng.cpp
 	$(CXX) $(FLAGS) -o $(BUILD) main_startcode.cpp rng.cpp
 
+build omp: main_startcode.cpp rng.cpp
+	$(CXX) $(FLAGS) -fopenmp -o $(BUILD) main_startcode.cpp rng.cpp
+
 run: build
 	./$(BUILD) --input $(DATA)/100000x5.csv \
 		--output $(OUTPUT)/output.csv \
 		--repetitions 1   --k 10 \
 		--seed 1337
 
+run omp: build omp
+	./$(BUILD) --input $(DATA)/100000x5.csv \
+		--output $(OUTPUT)/output.csv \
+		--repetitions 1   --k 10 \
+		--seed 1337
+debug omp: build omp
+	./$(BUILD) --input $(DATA)/100000x5.csv \
+		--output $(OUTPUT)/output.csv \
+		--trace $(OUTPUT)/clustertrace.csv \
+		--centroidtrace $(OUTPUT)/centroidtrace.csv \
+		--repetitions 10   --k 10 \
+		--seed 2507953
 # debug: build
 # 	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
 # 		--output $(OUTPUT)/output.csv \

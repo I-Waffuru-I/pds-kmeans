@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <numeric>
+#include <omp.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -264,6 +265,91 @@ void naiveClustering(std::vector<double> &centroids,
   // timer.stop();
 }
 
+void naiveOMPClustering(std::vector<double> &centroids,
+                        std::vector<double> &allData, std::vector<int> &cPoints,
+                        double &avgDist, DataSize &size, bool &changed) {
+  int centroidNumber = centroids.size() / size.cols;
+  // We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+  // de dimentie eruit halen
+  std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+
+  // We zetten ook eerst changed op false
+  changed = false;
+  // We gaan per dimentie hoveelheid de punten af
+  double sumSquaredDist = 0;
+
+  // AutoAverageTimer timer("inner loop");
+  for (size_t i = 0; i < size.rows; ++i) {
+    double minDist = std::numeric_limits<double>::max(); // can only get better
+    int cIndex = size.cols + 1;
+    // We moeten ook de cI traverseren per cols
+    for (size_t cI = 0; cI < centroidNumber; ++cI) {
+      double dist = 0;
+      // Alle punten afgaan van alle dimenties
+      // std::cout << "Point: ";
+
+      for (size_t c = 0; c < size.cols; c++) {
+        // std::cout << allData[c+i] << " , ";
+        dist += std::pow(
+            (allData[i * size.cols + c] - centroids[cI * size.cols + c]), 2);
+      }
+
+      // std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
+      // dist << std::endl;
+
+      // Check if is smaller than smallest distance
+      if (dist < minDist) {
+        minDist = dist;
+        // We delen hier door het aantal dimenties om eruit te halen op welke
+        // index we zitten
+        cIndex = cI;
+
+        // Som van squareddist
+        avgDist += minDist / size.rows;
+      }
+    }
+
+    // Voeg hier het punt aan de juiste cluster toe via de map
+    // Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
+    // op basis van hun dimentie En dan achteraf delen door het aantal punten
+    // dat hier eigenlijk in zat? We moeten de vector dan wel een vaste grootte
+    // geven van cols + 1 => de +1 voor het aantal punten mee te geven
+    // centroidMap[cIndex].push_back(i);
+
+    int pointIndex = i;
+    if (cPoints[pointIndex] != cIndex) {
+      changed = true;
+      cPoints[pointIndex] = cIndex;
+      // std::cout << "Changed point" << std::endl;
+    }
+
+    centroidMap[cIndex].resize(size.cols + 1);
+    for (int c = 0; c < size.cols; c++) {
+      // std::cout << allData[c+i] << " , ";
+      centroidMap[cIndex][c] += allData[i * size.cols + c];
+    }
+    centroidMap[cIndex][size.cols] += 1;
+    // std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
+    // std::endl;
+  }
+
+  // AutoAverageTimer timer("centroid sum");
+  // timer.start();
+  for (size_t i = 0; i < centroidNumber; i++) {
+    // std::cout << "Centroid " << i << ":";
+    // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+    // std::endl;
+    for (size_t p = 0; p < size.cols; p++) {
+      // Total sum divided by total amount of points
+      centroids[i * size.cols + p] =
+          centroidMap[i][p] / centroidMap[i][size.cols];
+    }
+
+    // timer.stop();
+  }
+  // timer.stop();
+}
+
 int kmeans(Rng &rng, const std::string &inputFile,
            const std::string &outputFileName, int numClusters, int repetitions,
            int numBlocks, int numThreads,
@@ -307,9 +393,14 @@ int kmeans(Rng &rng, const std::string &inputFile,
     return -1;
   }
 
-  std::vector<double> allData;
-  DataSize size = readData(datasetFile, allData);
+  
 
+
+	#pragma omp parallel
+  {
+std::vector<double> allData;
+  DataSize size = readData(datasetFile, allData);
+	
   // This is a basic timer from std::chrono ; feel free to use the appropriate
   // timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
   Timer timer;
@@ -331,77 +422,83 @@ int kmeans(Rng &rng, const std::string &inputFile,
   // Do the k-means routine a number of times, each time starting from
   // different random centroids (use Rng::pickRandomIndices), and keep
   // the best result of these repetitions.
-  for (int r = 0; r < repetitions; r++) {
-    size_t numSteps = 0;
 
-    // debugCentroids(centroids, size);
-    // They already seem to get randomly initialized
-    initCentroids(rng, centroids, allData, size);
-    // debugCentroids(centroids, size);
-    centroidDebugFile.write(centroids, size.cols);
+    for (int r = 0; r < repetitions; r++) {
+      size_t numSteps = 0;
 
-    AutoAverageTimer timer("time naïve clustering");
-    timer.start();
-    bool changed = true;
-
-    double avgDist = 0;
-    while (changed) {
-      avgDist = 0;
-      // debugCentroidPoints(pointsCentroid);
-
-      // oldCentroids = centroids;
-
-      // std::cout << "Before" << std::endl;
       // debugCentroids(centroids, size);
-      naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
-                      changed);
-
-      // std::cout << "After" << std::endl;
+      // They already seem to get randomly initialized
+      initCentroids(rng, centroids, allData, size);
       // debugCentroids(centroids, size);
+#pragma omp master
+      centroidDebugFile.write(centroids, size.cols);
 
-      // std::cout << "Old" << std::endl;
-      // debugCentroids(oldCentroids, size);
+      AutoAverageTimer timer("time naïve clustering");
+      timer.start();
+      bool changed = true;
 
-      // Write all centroids to file:
-      if (changed) {
+      double avgDist = 0;
+      while (changed) {
+        avgDist = 0;
+        // debugCentroidPoints(pointsCentroid);
 
-        centroidDebugFile.write(centroids, size.cols);
-      }
-			// Om een of andere reden moet dit er wel uit blijven en nog een keer geschreven worden
+        // oldCentroids = centroids;
+
+        // std::cout << "Before" << std::endl;
+        // debugCentroids(centroids, size);
+        naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
+                           changed);
+
+        // std::cout << "After" << std::endl;
+        // debugCentroids(centroids, size);
+
+        // std::cout << "Old" << std::endl;
+        // debugCentroids(oldCentroids, size);
+
+        // Write all centroids to file:
+        if (changed) {
+
+#pragma omp master
+          centroidDebugFile.write(centroids, size.cols);
+        }
+        // Om een of andere reden moet dit er wel uit blijven en nog een keer
+        // geschreven worden
+#pragma omp master
         clustersDebugFile.write(pointsCentroid, size.rows);
 
-      numSteps++;
+#pragma omp atomic
+        numSteps++;
+      }
+      // std::cout << "Best dist: " << bestDistSquaredSum
+      //           << " | avgDist: " << avgDist << std::endl;
+      // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
+      // gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
+      // niet overeenkwam.
+      if (avgDist < bestDistSquaredSum) {
+        // std::cout << "Chose repetition: " << r << std::endl;
+
+        bestDistSquaredSum = avgDist;
+        bestCluster = pointsCentroid;
+      }
+
+      // timer.stop();
+			#pragma omp critical 
+      stepsPerRepetition[r] = numSteps;
+
+      // bool changed = true;
+      // while (changed) {
+      //
+      //
+      //
+      // }
+
+      // Make sure debug logging is only done on first iteration ; subsequent
+      // checks with is_open will indicate that no logging needs to be done
+      // anymore.
+      centroidDebugFile.close();
+      clustersDebugFile.close();
     }
-    // std::cout << "Best dist: " << bestDistSquaredSum
-    //           << " | avgDist: " << avgDist << std::endl;
-    // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd gekeken
-    // naar aparte iteraties in de iteraties en het eindresultaat dus niet
-    // overeenkwam.
-    if (avgDist < bestDistSquaredSum) {
-      // std::cout << "Chose repetition: " << r << std::endl;
-
-      bestDistSquaredSum = avgDist;
-      bestCluster = pointsCentroid;
-    }
-
-    timer.stop();
-    stepsPerRepetition[r] = numSteps;
-
-    // bool changed = true;
-    // while (changed) {
-    //
-    //
-    //
-    // }
-
-    // Make sure debug logging is only done on first iteration ; subsequent
-    // checks with is_open will indicate that no logging needs to be done
-    // anymore.
-    centroidDebugFile.close();
-    clustersDebugFile.close();
-  }
-
-  timer.stop();
+timer.stop();
 
   // Some example output, of course you can log your timing data anyway you
   // like.
@@ -419,6 +516,9 @@ int kmeans(Rng &rng, const std::string &inputFile,
   csvOutputFile.write(stepsPerRepetition, "# Steps: ");
   // Write best clusters to csvOutputFile, something like
   csvOutputFile.write(bestCluster);
+  }
+
+  
 
   return 0;
 }
