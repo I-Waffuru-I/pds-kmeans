@@ -91,7 +91,7 @@ Arguments:
      - serial-naive  : Sequential naive implementation (naiveClustering)
      - omp           : Default OpenMP implementation (naiveOMPClustering)
      - omp-outeronly : Uses OMP for the outer loop but the serial implementation for the inner loop (naiveClustering) 
-     - omp-naive     : OpenMP naive implementation (naiveOMPClustering)
+     - omp-naive     : OpenMP naive implementation (naiveBaseOMPClustering)
      - omp-2         : OpenMP alternative implementation 2
      - mpi           : MPI implementation
      - cuda          : CUDA implementation

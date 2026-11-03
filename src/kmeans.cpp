@@ -340,6 +340,11 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 				naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
 				                size, changed);
 			}
+			else if (mode == "omp-naive")
+			{
+				naiveBaseOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+				                       size, changed, 0);
+			}
 			else
 			{
 				// Default OMP mode: "omp" or "omp-naive"

@@ -11,3 +11,7 @@ void naiveClustering(std::vector<double> &centroids,
 void naiveOMPClustering(std::vector<double> &centroids,
                         std::vector<double> &allData, std::vector<int> &cPoints,
                         double &avgDist, DataSize &size, bool &changed, int numThreads);
+
+void naiveBaseOMPClustering(std::vector<double> &centroids,
+                            std::vector<double> &allData, std::vector<int> &cPoints,
+                            double &avgDist, DataSize &size, bool &changed, int numThreads);
