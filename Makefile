@@ -1,49 +1,67 @@
-# -std=c++14: we're limiting ourselves to c++14, since that's what the 
-#             GCC compiler on the VSC supports.
-# -DNDEBUG: turns off e.g. assertion checks
-# -O3: enables optimizations in the compiler
+# Compiler and flags
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP
+INCLUDES := -Iinclude -Ilibs
+LDFLAGS :=
+EXTRAFLAGS :=
 
-# Settings for optimized build
-FLAGS=-O3 -DNDEBUG -std=c++17 -march=native -mtune=native
+# Directories and target executable
+SRC_DIRS := src libs
+BUILD_DIR := build
+TARGET := kmeans
+DATA := datasets
+OUTPUT := output
 
+ARGS ?= --input $(DATA)/100000x5.csv \
+	--output $(OUTPUT)/output.csv \
+	--repetitions 5 --k 10 \
+	--seed 1337
 
-# Settings for a debug build
-#FLAGS=-g -std=c++14
+# Find all .cpp files in src/ and libs/
+SRCS := $(wildcard src/*.cpp libs/*.cpp)
+OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(notdir $(SRCS)))
+DEPS := $(OBJS:.o=.d)
 
-BUILD = kmeans
-DATA = datasets
-OUTPUT = output
+# Tell Make where to search for .cpp files
+vpath %.cpp $(SRC_DIRS)
 
-ARGS ?=
+# Default rule: build the executable
+all: $(TARGET)
 
-all: build
+# Link object files to create the final executable
+$(TARGET): $(OBJS)
+	$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
-clean:
-	rm -f $(BUILD)
-	rm -fr $(OUTPUT)
+# Compile each .cpp file into build/*.o
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(EXTRAFLAGS) -c $< -o $@
 
-build: main_startcode.cpp rng.cpp
-	$(CXX) $(FLAGS) $(ARGS) -o $(BUILD) main_startcode.cpp rng.cpp
+# Create build directory if it does not exist
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
+# Enable OpenMP support
+omp: CXXFLAGS += -fopenmp
+omp: LDFLAGS += -fopenmp
+omp: $(TARGET)
 
-run: build
-	./$(BUILD) --input $(DATA)/100000x5.csv \
+# Custom rule to compile and run with arguments
+run: $(TARGET)
+	./$(TARGET) $(ARGS)
+
+# Run with debug trace options
+debug: $(TARGET)
+	./$(TARGET) --input $(DATA)/mouse_500x2.csv \
 		--output $(OUTPUT)/output.csv \
-		--repetitions 1   --k 10 \
-		--seed 1337
-
-omp: FLAGS += -fopenmp
-
-
-# debug: build
-# 	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
-# 		--output $(OUTPUT)/output.csv \
-# 		--repetitions 10   --k 3 \
-# 		--centroidtrace $(OUTPUT)/centroidtrace.csv \
-# 		--trace $(OUTPUT)/clustertrace.csv --seed 2507953
-debug: build
-	./$(BUILD) --input $(DATA)/mouse_500x2.csv \
-		--output $(OUTPUT)/output.csv \
-		--repetitions 10   --k 3 \
+		--repetitions 10 --k 3 \
 		--centroidtrace $(OUTPUT)/centroidtrace.csv \
 		--trace $(OUTPUT)/clustertrace.csv --seed 1338
+
+# Remove build artifacts
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET)
+
+# Include automatically generated header dependency files
+-include $(DEPS)
+
+.PHONY: all omp run debug clean
