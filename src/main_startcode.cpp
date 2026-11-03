@@ -96,8 +96,8 @@ int kmeans(Rng &rng, const std::string &inputFile,
            const std::string &centroidDebugFileName,
            const std::string &clusterDebugFileName) {
 
-  return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
-  // return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
+  // return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
+  return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
 }
 
 

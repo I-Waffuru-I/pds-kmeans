@@ -34,7 +34,7 @@ $(TARGET): $(OBJS)
 
 # Compile each .cpp file into build/*.o
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(EXTRAFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES)  -c $< -o $@
 
 # Create build directory if it does not exist
 $(BUILD_DIR):
@@ -47,11 +47,11 @@ omp: $(TARGET)
 
 # Custom rule to compile and run with arguments
 run: $(TARGET)
-	./$(TARGET) $(ARGS)
+	./$(TARGET) $(ARGS) $(EXTRAFLAGS)
 
 # Run with debug trace options
 debug: $(TARGET)
-	./$(TARGET) --input $(DATA)/mouse_500x2.csv \
+	./$(TARGET) $(EXTRAFLAGS) --input $(DATA)/mouse_500x2.csv \
 		--output $(OUTPUT)/output.csv \
 		--repetitions 10 --k 3 \
 		--centroidtrace $(OUTPUT)/centroidtrace.csv \

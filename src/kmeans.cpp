@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <omp.h>
 
 namespace fs = std::filesystem;
 
@@ -104,11 +105,11 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
       // debugCentroids(centroids, size);
       // naiveCacheClustering(centroids, allData, pointsCentroid, avgDist, size,
       // changed);
-      naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
-                         changed);
+      // naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
+      //                    changed);
 
-      // naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
-      // changed);
+      naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
+      changed);
 
       // std::cout << "After" << std::endl;
       // debugCentroids(centroids, size);
@@ -239,34 +240,39 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 
   // We calculate the min and max bounds so we can more efficiëntly set up the
   // random centroids
-  std::vector<double> centroids(numClusters * size.cols);
+  std::vector<std::vector<double>> centroids(
+      repetitions, std::vector<double>(numClusters * size.cols));
   std::vector<double> oldCentroids(numClusters * size.cols);
 
   // Also a list to keep track of which points where assigned to what centroid
-  std::vector<int> pointsCentroid(size.rows);
-  pointsCentroid.assign(allData.size() / size.cols, -1);
+  std::vector<std::vector<int>> pointsCentroid(repetitions, std::vector<int>(size.rows));
+
   // Do the k-means routine a number of times, each time starting from
   // different random centroids (use Rng::pickRandomIndices), and keep
   // the best result of these repetitions.
 
   timer.start();
 
+	if(numThreads != 0) omp_set_num_threads(numThreads);
+
 #pragma omp parallel for schedule(guided)
-  for (int r = 0; r < repetitions; r++) {
+	for (int r = 0; r < repetitions; r++) {
     size_t numSteps = 0;
+  pointsCentroid[r].assign(allData.size() / size.cols, -1);
 
     // debugCentroids(centroids, size);
     // They already seem to get randomly initialized
-    initCentroids(rng, centroids, allData, size);
+    initCentroids(rng, centroids[r], allData, size);
     // debugCentroids(centroids, size);
-    centroidDebugFile.write(centroids, size.cols);
+		// TODO: Vervangen door een Vector
+    // centroidDebugFile.write(centroids, size.cols);
 
     AutoAverageTimer timer2("time naïve clustering");
     timer2.start();
-    bool changed = true;
+    bool changed = false;
 
     double avgDist = 0;
-    while (changed) {
+    do {
       avgDist = 0;
       // debugCentroidPoints(pointsCentroid);
 
@@ -276,29 +282,27 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
       // debugCentroids(centroids, size);
       // naiveCacheClustering(centroids, allData, pointsCentroid, avgDist, size,
       // changed);
-      naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
+      naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist, size,
                          changed);
 
-      // naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
-      // changed);
-
-      // std::cout << "After" << std::endl;
-      // debugCentroids(centroids, size);
-
-      // std::cout << "Old" << std::endl;
-      // debugCentroids(oldCentroids, size);
+      // naiveClustering(centroids[r], allData, pointsCentroid, avgDist, size, changed);
 
       // Write all centroids to file:
+      // Even disablen want dit zou raceconditions veroorzaken
       if (changed) {
 
-        centroidDebugFile.write(centroids, size.cols);
+        // centroidDebugFile.write(centroids, size.cols);
       }
       // Om een of andere reden moet dit er wel uit blijven en nog een keer
       // geschreven worden
-      clustersDebugFile.write(pointsCentroid, size.rows);
+      // Even disablen want dit zou racecondigtions veroorzaken.
+      // TODO: Vervangen door een array met wat te schrijven?
+      // clustersDebugFile.write(pointsCentroid, size.rows);
 
       numSteps++;
-    }
+    }while(changed);
+
+			// std::cout << "Loop completed" << std::endl;
     // std::cout << "Best dist: " << bestDistSquaredSum
     //           << " | avgDist: " << avgDist << std::endl;
     // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
@@ -311,16 +315,14 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
       {
         bestDistSquaredSum = avgDist;
 
-        bestCluster = pointsCentroid;
+        bestCluster = pointsCentroid[r];
       }
     }
 
     // timer.stop();
 
-#pragma omp critical
-    {
+		// This shouldn't create race conditions as it accesses a different spot of the vector for a repetition
       stepsPerRepetition[r] = numSteps;
-    }
 
     // bool changed = true;
     // while (changed) {

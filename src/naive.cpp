@@ -299,13 +299,13 @@ void naiveOMPClustering(std::vector<double> &centroids,
       // Total sum divided by total amount of points
       // If  there are  no points  assigned to a  centroid we avoid dividing by
       // zero
-#pragma omp critical
-      {
+// #pragma omp critical
+//       {
         if (centroidMap[i][size.cols] != 0) {
           centroids[i * size.cols + p] =
               centroidMap[i][p] / centroidMap[i][size.cols];
         }
-      }
+      // }
     }
 
     // timer.stop();
