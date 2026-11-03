@@ -13,344 +13,385 @@
 
 void naiveClustering(std::vector<double> &centroids,
                      std::vector<double> &allData, std::vector<int> &cPoints,
-                     double &avgDist, DataSize &size, bool &changed) {
-  int centroidNumber = centroids.size() / size.cols;
-  // We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
-  // de dimentie eruit halen
-  // std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-  std::vector<std::vector<double>> centroidMap(
-      centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+                     double &avgDist, DataSize &size, bool &changed)
+{
+	int centroidNumber = centroids.size() / size.cols;
+	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+	// de dimentie eruit halen
+	// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+	std::vector<std::vector<double>> centroidMap(
+	    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
 
-  // We zetten ook eerst changed op false
-  changed = false;
-  // We gaan per dimentie hoveelheid de punten af
-  double sumSquaredDist = 0;
+	// We zetten ook eerst changed op false
+	changed = false;
+	// We gaan per dimentie hoveelheid de punten af
 
-  // AutoAverageTimer timer("main inner loop");
+	// AutoAverageTimer timer("main inner loop");
 
-  // AutoAverageTimer timerPoints("assign points to centroid");
-  //
-  // AutoAverageTimer distTimer("Calculate dist to centroid");
-  // timer.start();
-  for (size_t i = 0; i < size.rows; ++i) {
-    double minDist = std::numeric_limits<double>::max(); // can only get better
-    int cIndex = size.cols + 1;
-    // We moeten ook de cI traverseren per cols
+	// AutoAverageTimer timerPoints("assign points to centroid");
+	//
+	// AutoAverageTimer distTimer("Calculate dist to centroid");
+	// timer.start();
+	for (size_t i = 0; i < size.rows; ++i)
+	{
+		double minDist = std::numeric_limits<double>::max(); // can only get better
+		int cIndex = size.cols + 1;
+		// We moeten ook de cI traverseren per cols
 
-    // timerPoints.start();
-    for (size_t cI = 0; cI < centroidNumber; ++cI) {
-      double dist = 0;
-      // Alle punten afgaan van alle dimenties
-      // std::cout << "Point: ";
+		// timerPoints.start();
+		for (size_t cI = 0; cI < centroidNumber; ++cI)
+		{
+			double dist = 0;
+			// Alle punten afgaan van alle dimenties
+			// std::cout << "Point: ";
 
-      // distTimer.start();
-      for (size_t c = 0; c < size.cols; c++) {
-        // std::cout << allData[c+i] << " , ";
-        dist += std::pow(
-            (allData[i * size.cols + c] - centroids[cI * size.cols + c]), 2);
-      }
+			// distTimer.start();
+			for (size_t c = 0; c < size.cols; c++)
+			{
+				// std::cout << allData[c+i] << " , ";
+				double diff = allData[i * size.cols + c] - centroids[cI * size.cols + c];
 
-      // std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
-      // dist << std::endl;
+				dist += diff * diff;
+				// NO FUCKING WAY, DIT WAS DE BOOSDOENER zorgt voor een versnelling van ongeveer 15 sec => 1.5 als ik het weghaal. Godverdomme
+				// dist += std::pow(diff, 2);
+			}
 
-      // Check if is smaller than smallest distance
-      if (dist < minDist) {
-        minDist = dist;
-        // We delen hier door het aantal dimenties om eruit te halen op welke
-        // index we zitten
-        cIndex = cI;
-      }
-    }
-    // Som van squareddist
-    avgDist += minDist / size.rows;
+			// std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
+			// dist << std::endl;
 
-    // Voeg hier het punt aan de juiste cluster toe via de map
-    // Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
-    // op basis van hun dimentie En dan achteraf delen door het aantal punten
-    // dat hier eigenlijk in zat? We moeten de vector dan wel een vaste grootte
-    // geven van cols + 1 => de +1 voor het aantal punten mee te geven
-    // centroidMap[cIndex].push_back(i);
+			// Check if is smaller than smallest distance
+			if (dist < minDist)
+			{
+				minDist = dist;
+				// We delen hier door het aantal dimenties om eruit te halen op welke
+				// index we zitten
+				cIndex = cI;
+			}
+		}
+		// Som van squareddist
+		// We veranderen de deling  aangezien deze vrij traag is door een optelling en zullen later pas delen door size.rows
+		// avgDist += minDist / size.rows;
+		avgDist += minDist;
 
-    int pointIndex = i;
-    if (cPoints[pointIndex] != cIndex) {
-      changed = true;
-      cPoints[pointIndex] = cIndex;
-      // std::cout << "Changed point" << std::endl;
-    }
+		// Voeg hier het punt aan de juiste cluster toe via de map
+		// Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
+		// op basis van hun dimentie En dan achteraf delen door het aantal punten
+		// dat hier eigenlijk in zat? We moeten de vector dan wel een vaste grootte
+		// geven van cols + 1 => de +1 voor het aantal punten mee te geven
+		// centroidMap[cIndex].push_back(i);
 
-    centroidMap[cIndex].resize(size.cols + 1);
-    for (int c = 0; c < size.cols; c++) {
-      // std::cout << allData[c+i] << " , ";
-      centroidMap[cIndex][c] += allData[i * size.cols + c];
-    }
-    centroidMap[cIndex][size.cols] += 1;
-    // std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
-    // std::endl;
-  }
+		int pointIndex = i;
+		if (cPoints[pointIndex] != cIndex)
+		{
+			changed = true;
+			cPoints[pointIndex] = cIndex;
+			// std::cout << "Changed point" << std::endl;
+		}
 
-  // distTimer.stop();
-  // timerPoints.stop();
-  // timer.stop();
+		centroidMap[cIndex].resize(size.cols + 1);
+		for (int c = 0; c < size.cols; c++)
+		{
+			// std::cout << allData[c+i] << " , ";
+			centroidMap[cIndex][c] += allData[i * size.cols + c];
+		}
+		centroidMap[cIndex][size.cols] += 1;
+		// std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
+		// std::endl;
+	}
 
-  // AutoAverageTimer timer2("centroid sum");
-  // timer2.start();
-  for (size_t i = 0; i < centroidNumber; i++) {
-    // std::cout << "Centroid " << i << ":";
-    // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
-    // std::endl;
-    for (size_t p = 0; p < size.cols; p++) {
-      // Total sum divided by total amount of points
-      if (centroidMap[i][size.cols] != 0) {
-        centroids[i * size.cols + p] =
-            centroidMap[i][p] / centroidMap[i][size.cols];
-      }
-    }
+	avgDist = avgDist / size.rows;
 
-    // timer.stop();
-  }
-  // timer2.stop();
+	// distTimer.stop();
+	// timerPoints.stop();
+	// timer.stop();
+
+	// AutoAverageTimer timer2("centroid sum");
+	// timer2.start();
+	for (size_t i = 0; i < centroidNumber; i++)
+	{
+		// std::cout << "Centroid " << i << ":";
+		// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+		// std::endl;
+		for (size_t p = 0; p < size.cols; p++)
+		{
+			// Total sum divided by total amount of points
+			if (centroidMap[i][size.cols] != 0)
+			{
+				centroids[i * size.cols + p] =
+				    centroidMap[i][p] / centroidMap[i][size.cols];
+			}
+		}
+
+		// timer.stop();
+	}
+	// timer2.stop();
 }
 
 void naiveCacheClustering(std::vector<double> &centroids,
                           std::vector<double> &allData,
                           std::vector<int> &cPoints, double &avgDist,
-                          DataSize &size, bool &changed) {
-  int centroidNumber = centroids.size() / size.cols;
-  // We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
-  // de dimentie eruit halen
-  // std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-  std::vector<std::vector<double>> centroidMap(
-      centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+                          DataSize &size, bool &changed)
+{
+	int centroidNumber = centroids.size() / size.cols;
+	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+	// de dimentie eruit halen
+	// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+	std::vector<std::vector<double>> centroidMap(
+	    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
 
-  // We zetten ook eerst changed op false
-  changed = false;
-  // We gaan per dimentie hoveelheid de punten af
-  double sumSquaredDist = 0;
+	// We zetten ook eerst changed op false
+	changed = false;
+	// We gaan per dimentie hoveelheid de punten af
+	double sumSquaredDist = 0;
 
-  // AutoAverageTimer timer("main inner loop");
+	// AutoAverageTimer timer("main inner loop");
 
-  // AutoAverageTimer timerPoints("assign points to centroid");
-  //
-  // AutoAverageTimer distTimer("Calculate dist to centroid");
-  // timer.start();
+	// AutoAverageTimer timerPoints("assign points to centroid");
+	//
+	// AutoAverageTimer distTimer("Calculate dist to centroid");
+	// timer.start();
 
-  int partSize = 8 * size.cols;
+	int partSize = 8 * size.cols;
 
-  for (size_t i = 0; i < size.rows; i += partSize) {
-    int iMax = std::min(i + partSize, size.rows);
-    for (size_t ii = i; ii < iMax; ++ii) {
-      double minDist =
-          std::numeric_limits<double>::max(); // can only get better
-      int cIndex = size.cols + 1;
-      // We moeten ook de cI traverseren per cols
+	for (size_t i = 0; i < size.rows; i += partSize)
+	{
+		int iMax = std::min(i + partSize, size.rows);
+		for (size_t ii = i; ii < iMax; ++ii)
+		{
+			double minDist =
+			    std::numeric_limits<double>::max(); // can only get better
+			int cIndex = size.cols + 1;
+			// We moeten ook de cI traverseren per cols
 
-      // timerPoints.start();
-      for (size_t cI = 0; cI < centroidNumber; ++cI) {
-        double dist = 0;
-        // Alle punten afgaan van alle dimenties
-        // std::cout << "Point: ";
+			// timerPoints.start();
+			for (size_t cI = 0; cI < centroidNumber; ++cI)
+			{
+				double dist = 0;
+				// Alle punten afgaan van alle dimenties
+				// std::cout << "Point: ";
 
-        // distTimer.start();
-        for (size_t c = 0; c < size.cols; c++) {
-          // std::cout << allData[c+i] << " , ";
-          dist += std::pow(
-              (allData[ii * size.cols + c] - centroids[cI * size.cols + c]), 2);
-        }
+				// distTimer.start();
+				for (size_t c = 0; c < size.cols; c++)
+				{
+					// std::cout << allData[c+i] << " , ";
+					dist += std::pow(
+					    (allData[ii * size.cols + c] - centroids[cI * size.cols + c]), 2);
+				}
 
-        // std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
-        // dist << std::endl;
+				// std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
+				// dist << std::endl;
 
-        // Check if is smaller than smallest distance
-        if (dist < minDist) {
-          minDist = dist;
-          // We delen hier door het aantal dimenties om eruit te halen op welke
-          // index we zitten
-          cIndex = cI;
-        }
-      }
-      // Som van squareddist
-      avgDist += minDist / size.rows;
+				// Check if is smaller than smallest distance
+				if (dist < minDist)
+				{
+					minDist = dist;
+					// We delen hier door het aantal dimenties om eruit te halen op welke
+					// index we zitten
+					cIndex = cI;
+				}
+			}
+			// Som van squareddist
+			avgDist += minDist / size.rows;
 
-      // Voeg hier het punt aan de juiste cluster toe via de map
-      // Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
-      // op basis van hun dimentie En dan achteraf delen door het aantal punten
-      // dat hier eigenlijk in zat? We moeten de vector dan wel een vaste
-      // grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
-      // centroidMap[cIndex].push_back(i);
+			// Voeg hier het punt aan de juiste cluster toe via de map
+			// Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
+			// op basis van hun dimentie En dan achteraf delen door het aantal punten
+			// dat hier eigenlijk in zat? We moeten de vector dan wel een vaste
+			// grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
+			// centroidMap[cIndex].push_back(i);
 
-      int pointIndex = ii;
-      if (cPoints[pointIndex] != cIndex) {
-        changed = true;
-        cPoints[pointIndex] = cIndex;
-        // std::cout << "Changed point" << std::endl;
-      }
+			int pointIndex = ii;
+			if (cPoints[pointIndex] != cIndex)
+			{
+				changed = true;
+				cPoints[pointIndex] = cIndex;
+				// std::cout << "Changed point" << std::endl;
+			}
 
-      centroidMap[cIndex].resize(size.cols + 1);
-      for (int c = 0; c < size.cols; c++) {
-        // std::cout << allData[c+i] << " , ";
-        centroidMap[cIndex][c] += allData[ii * size.cols + c];
-      }
-      centroidMap[cIndex][size.cols] += 1;
-      // std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
-      // std::endl;
-    }
-  }
+			centroidMap[cIndex].resize(size.cols + 1);
+			for (int c = 0; c < size.cols; c++)
+			{
+				// std::cout << allData[c+i] << " , ";
+				centroidMap[cIndex][c] += allData[ii * size.cols + c];
+			}
+			centroidMap[cIndex][size.cols] += 1;
+			// std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
+			// std::endl;
+		}
+	}
 
-  // distTimer.stop();
-  // timerPoints.stop();
-  // timer.stop();
+	// distTimer.stop();
+	// timerPoints.stop();
+	// timer.stop();
 
-  // AutoAverageTimer timer2("centroid sum");
-  // timer2.start();
-  for (size_t i = 0; i < centroidNumber; i++) {
-    // std::cout << "Centroid " << i << ":";
-    // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
-    // std::endl;
-    for (size_t p = 0; p < size.cols; p++) {
-      // Total sum divided by total amount of points
-      if (centroidMap[i][size.cols] != 0) {
-        centroids[i * size.cols + p] =
-            centroidMap[i][p] / centroidMap[i][size.cols];
-      }
-    }
+	// AutoAverageTimer timer2("centroid sum");
+	// timer2.start();
+	for (size_t i = 0; i < centroidNumber; i++)
+	{
+		// std::cout << "Centroid " << i << ":";
+		// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+		// std::endl;
+		for (size_t p = 0; p < size.cols; p++)
+		{
+			// Total sum divided by total amount of points
+			if (centroidMap[i][size.cols] != 0)
+			{
+				centroids[i * size.cols + p] =
+				    centroidMap[i][p] / centroidMap[i][size.cols];
+			}
+		}
 
-    // timer.stop();
-  }
-  // timer2.stop();
+		// timer.stop();
+	}
+	// timer2.stop();
 }
 
 // Voor OMP
 void naiveOMPClustering(std::vector<double> &centroids,
                         std::vector<double> &allData, std::vector<int> &cPoints,
                         double &avgDist, DataSize &size, bool &changed,
-                        int numThreads) {
-  int centroidNumber = centroids.size() / size.cols;
-  // We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
-  // de dimentie eruit halen
-  // std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-  // This is the shared mapa
-  std::vector<std::vector<double>> centroidMap(
-      centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+                        int numThreads)
+{
+	int centroidNumber = centroids.size() / size.cols;
+	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+	// de dimentie eruit halen
+	// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+	// This is the shared mapa
+	std::vector<std::vector<double>> centroidMap(
+	    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
 
-  // We zetten ook eerst changed op false
-  changed = false;
-  // We gaan per dimentie hoveelheid de punten af
+	// We zetten ook eerst changed op false
+	changed = false;
+	// We gaan per dimentie hoveelheid de punten af
 
-
-  // We gebruiken eerst een gewone parallel zodat we voor een thread eerst een
-  // localCentroidMap kunnen definieren We gebruiken ook een reduce variabele
-  // voor de avgDist en de changed bool zodat we critical en atomic kunnen
-  // vermijden
+	// We gebruiken eerst een gewone parallel zodat we voor een thread eerst een
+	// localCentroidMap kunnen definieren We gebruiken ook een reduce variabele
+	// voor de avgDist en de changed bool zodat we critical en atomic kunnen
+	// vermijden
 	// RESULTAAT: 4.5 sec => 0.11
 #pragma omp parallel reduction(+ : avgDist) reduction(|| : changed)
-  {
-    std::vector<std::vector<double>> localCentroidMap(
-        centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+	{
+		std::vector<std::vector<double>> localCentroidMap(
+		    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
 
-		// THREADS moeten niet wachten voordat ze mergen dus dat kan al worden meegegegeven
-		#pragma omp for nowait
-    for (size_t ii = 0; ii < size.rows; ++ii) {
-      double minDist =
-          std::numeric_limits<double>::max(); // can only get better
-      int cIndex = size.cols + 1;
+// THREADS moeten niet wachten voordat ze mergen dus dat kan al worden meegegegeven
+#pragma omp for nowait
+		for (size_t ii = 0; ii < size.rows; ++ii)
+		{
+			double minDist =
+			    std::numeric_limits<double>::max(); // can only get better
+			int cIndex = size.cols + 1;
 
-      double partTime;
-      // We moeten ook de cI traverseren per cols
-			
-      for (int cI = 0; cI < centroidNumber; ++cI) {
-        double dist = 0;
-        // Alle punten afgaan van alle dimenties
-        // std::cout << "Point: ";
+			double partTime;
+			// We moeten ook de cI traverseren per cols
 
-        for (size_t c = 0; c < size.cols; c++) {
+			for (int cI = 0; cI < centroidNumber; ++cI)
+			{
+				double dist = 0;
+				// Alle punten afgaan van alle dimenties
+				// std::cout << "Point: ";
 
-          // std::cout << allData[c+i] << " , ";
-          dist += std::pow(
-              (allData[ii * size.cols + c] - centroids[cI * size.cols + c]), 2);
-        }
+				for (size_t c = 0; c < size.cols; c++)
+				{
+					double diff = allData[ii * size.cols + c] - centroids[cI * size.cols + c];
 
-        // std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
-        // dist << std::endl;
+					dist += diff * diff;
+					// NO FUCKING WAY, DIT WAS DE BOOSDOENER zorgt voor een versnelling van ongeveer 15 sec => 1.5 als ik het weghaal. Godverdomme
+					// dist += std::pow(diff, 2);
+				}
 
-        // Check if is smaller than smallest distance
-        if (dist < minDist) {
-          minDist = dist;
-          // We delen hier door het aantal dimenties om eruit te halen op welke
-          // index we zitten
-          cIndex = cI;
-        }
-      }
+				// std::cout << "Dist to centroid: " << cI / size.cols << " Dist: " <<
+				// dist << std::endl;
 
-      partTime = omp_get_wtime();
-      // Som van squareddist
-      avgDist += minDist / size.rows;
+				// Check if is smaller than smallest distance
+				if (dist < minDist)
+				{
+					minDist = dist;
+					// We delen hier door het aantal dimenties om eruit te halen op welke
+					// index we zitten
+					cIndex = cI;
+				}
+			}
 
-      // Voeg hier het punt aan de juiste cluster toe via de map
-      // Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
-      // op basis van hun dimentie En dan achteraf delen door het aantal punten
-      // dat hier eigenlijk in zat? We moeten de vector dan wel een vaste
-      // grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
-      // centroidMap[cIndex].push_back(i);
+			partTime = omp_get_wtime();
+			// Som van squareddist
+			avgDist += minDist;
 
-      int pointIndex = ii;
-      if (cPoints[pointIndex] != cIndex) {
-        changed = true;
+			// Voeg hier het punt aan de juiste cluster toe via de map
+			// Kan ik hier eigenlijk niet al de waardes van punten optellen bij andere
+			// op basis van hun dimentie En dan achteraf delen door het aantal punten
+			// dat hier eigenlijk in zat? We moeten de vector dan wel een vaste
+			// grootte geven van cols + 1 => de +1 voor het aantal punten mee te geven
+			// centroidMap[cIndex].push_back(i);
 
-        cPoints[pointIndex] = cIndex;
-        // std::cout << "Changed point" << std::endl;
-      }
+			int pointIndex = ii;
+			if (cPoints[pointIndex] != cIndex)
+			{
+				changed = true;
 
-      // centroidMap[cIndex].reserve(size.cols);
-      for (size_t c = 0; c < size.cols; c++) {
-        // std::cout << allData[c+i] << " , ";
-        localCentroidMap[cIndex][c] += allData[ii * size.cols + c];
-      }
-      localCentroidMap[cIndex][size.cols] += 1;
+				cPoints[pointIndex] = cIndex;
+				// std::cout << "Changed point" << std::endl;
+			}
 
-      partTime = omp_get_wtime() - partTime;
+			// centroidMap[cIndex].reserve(size.cols);
+			for (size_t c = 0; c < size.cols; c++)
+			{
+				// std::cout << allData[c+i] << " , ";
+				localCentroidMap[cIndex][c] += allData[ii * size.cols + c];
+			}
+			localCentroidMap[cIndex][size.cols] += 1;
 
-      // #pragma omp atomic
-      // totalTime += partTime;
+			partTime = omp_get_wtime() - partTime;
 
-      // std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
-      // std::endl;
-    }
+			// #pragma omp atomic
+			// totalTime += partTime;
+
+			// std::cout << "CIndex: " << cIndex << " Distance: " << minDist <<
+			// std::endl;
+		}
 
 // Nu moeten we gewoon de locale maps reducen naar de shared centroid map met
 // deze keer maar 1 critical
 #pragma omp critical
-    {
-      for (int r = 0; r < centroidNumber; r++) {
-        for (int c = 0; c < size.cols + 1; c++) {
-          centroidMap[r][c] += localCentroidMap[r][c];
-        }
-      }
-    }
-  }
+		{
+			for (int r = 0; r < centroidNumber; r++)
+			{
+				for (int c = 0; c < size.cols + 1; c++)
+				{
+					centroidMap[r][c] += localCentroidMap[r][c];
+				}
+			}
+		}
+	}
 
-  // std::cout << "Total time on thread: " << omp_get_thread_num() << " for
-  // observerd opp: " << totalTime << std::endl;
+	avgDist = avgDist / size.rows;
 
-  // AutoAverageTimer timer("centroid sum");
-  // timer.start();
-  for (size_t i = 0; i < centroidNumber; i++) {
-    // std::cout << "Centroid " << i << ":";
-    // std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
-    // std::endl;
-    for (size_t p = 0; p < size.cols; p++) {
-      // Total sum divided by total amount of points
-      // If  there are  no points  assigned to a  centroid we avoid dividing by
-      // zero
-      // #pragma omp critical
-      //       {
-      if (centroidMap[i][size.cols] != 0) {
-        centroids[i * size.cols + p] =
-            centroidMap[i][p] / centroidMap[i][size.cols];
-      }
-      // }
-    }
+	// std::cout << "Total time on thread: " << omp_get_thread_num() << " for
+	// observerd opp: " << totalTime << std::endl;
 
-    // timer.stop();
-  }
-  // timer.stop();
+	// AutoAverageTimer timer("centroid sum");
+	// timer.start();
+	for (size_t i = 0; i < centroidNumber; i++)
+	{
+		// std::cout << "Centroid " << i << ":";
+		// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+		// std::endl;
+		for (size_t p = 0; p < size.cols; p++)
+		{
+			// Total sum divided by total amount of points
+			// If  there are  no points  assigned to a  centroid we avoid dividing by
+			// zero
+			// #pragma omp critical
+			//       {
+			if (centroidMap[i][size.cols] != 0)
+			{
+				centroids[i * size.cols + p] =
+				    centroidMap[i][p] / centroidMap[i][size.cols];
+			}
+			// }
+		}
+
+		// timer.stop();
+	}
+	// timer.stop();
 }

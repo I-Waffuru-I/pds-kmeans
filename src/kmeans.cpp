@@ -7,7 +7,9 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#ifdef HAVE_OMP
 #include <omp.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -15,381 +17,417 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
                  const std::string &outputFileName, int numClusters,
                  int repetitions, int numBlocks, int numThreads,
                  const std::string &centroidDebugFileName,
-                 const std::string &clusterDebugFileName) {
+                 const std::string &clusterDebugFileName)
+{
 
-  // If debug filenames are specified, this opens them. The is_open method
-  // can be used to check if they are actually open and should be written to.
-  FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
-  FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
+	// If debug filenames are specified, this opens them. The is_open method
+	// can be used to check if they are actually open and should be written to.
+	FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
+	FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
 
-  // Ik had een probleem eerst dat als de output/ dir nog niet bestaat het
-  // programma niet wilt werken. Dus we zullen eerst checken of de map er is en
-  // deze aanmaken indien nodig
+	// Ik had een probleem eerst dat als de output/ dir nog niet bestaat het
+	// programma niet wilt werken. Dus we zullen eerst checken of de map er is en
+	// deze aanmaken indien nodig
 
-  fs::path dirPath;
+	fs::path dirPath;
 
-  try {
-    dirPath = fs::path(outputFileName).parent_path();
-    if (fs::create_directories(dirPath)) {
-      std::cout << "Created new directory" << std::endl;
-    } else {
-      std::cout << "Directory already exists" << std::endl;
-    }
-  } catch (std::exception e) {
+	try
+	{
+		dirPath = fs::path(outputFileName).parent_path();
+		if (fs::create_directories(dirPath))
+		{
+			std::cout << "Created new directory" << std::endl;
+		}
+		else
+		{
+			std::cout << "Directory already exists" << std::endl;
+		}
+	}
+	catch (std::exception e)
+	{
 
-    std::cout << e.what() << std::endl;
-    // throw e;
-  }
+		std::cout << e.what() << std::endl;
+		// throw e;
+	}
 
-  FileCSVWriter csvOutputFile(outputFileName);
-  if (!csvOutputFile.is_open()) {
-    std::cerr << "Unable to open output file " << outputFileName << std::endl;
-    return -1;
-  }
+	FileCSVWriter csvOutputFile(outputFileName);
+	if (!csvOutputFile.is_open())
+	{
+		std::cerr << "Unable to open output file " << outputFileName << std::endl;
+		return -1;
+	}
 
-  std::ifstream datasetFile;
-  datasetFile.open(inputFile);
-  if (!datasetFile.is_open()) {
-    std::cerr << "Unable to open input file " << inputFile << std::endl;
-    return -1;
-  }
+	std::ifstream datasetFile;
+	datasetFile.open(inputFile);
+	if (!datasetFile.is_open())
+	{
+		std::cerr << "Unable to open input file " << inputFile << std::endl;
+		return -1;
+	}
 
-  std::vector<double> allData;
-  DataSize size = readData(datasetFile, allData);
+	std::vector<double> allData;
+	DataSize size = readData(datasetFile, allData);
 
-  // This is a basic timer from std::chrono ; feel free to use the appropriate
-  // timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
-  Timer timer;
+	// This is a basic timer from std::chrono ; feel free to use the appropriate
+	// timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
+	Timer timer;
 
-  double bestDistSquaredSum =
-      std::numeric_limits<double>::max(); // can only get better
-  std::vector<int> bestCluster(size.rows);
-  std::vector<size_t> stepsPerRepetition(
-      repetitions); // to save the number of steps each rep needed
+	double bestDistSquaredSum =
+	    std::numeric_limits<double>::max(); // can only get better
+	std::vector<int> bestCluster(size.rows);
+	std::vector<size_t> stepsPerRepetition(
+	    repetitions); // to save the number of steps each rep needed
 
-  // We calculate the min and max bounds so we can more efficiëntly set up the
-  // random centroids
-  std::vector<double> centroids(numClusters * size.cols);
-  std::vector<double> oldCentroids(numClusters * size.cols);
+	// We calculate the min and max bounds so we can more efficiëntly set up the
+	// random centroids
+	std::vector<double> centroids(numClusters * size.cols);
+	std::vector<double> oldCentroids(numClusters * size.cols);
 
-  // Also a list to keep track of which points where assigned to what centroid
-  std::vector<int> pointsCentroid(size.rows);
-  pointsCentroid.assign(allData.size() / size.cols, -1);
-  // Do the k-means routine a number of times, each time starting from
-  // different random centroids (use Rng::pickRandomIndices), and keep
-  // the best result of these repetitions.
+	// Also a list to keep track of which points where assigned to what centroid
+	std::vector<int> pointsCentroid(size.rows);
+	pointsCentroid.assign(allData.size() / size.cols, -1);
+	// Do the k-means routine a number of times, each time starting from
+	// different random centroids (use Rng::pickRandomIndices), and keep
+	// the best result of these repetitions.
 
-  timer.start();
+	timer.start();
 
-  for (int r = 0; r < repetitions; r++) {
-    size_t numSteps = 0;
+	for (int r = 0; r < repetitions; r++)
+	{
+		size_t numSteps = 0;
 
-    // debugCentroids(centroids, size);
-    // They already seem to get randomly initialized
-    initCentroids(rng, centroids, allData, size);
-    // debugCentroids(centroids, size);
-    centroidDebugFile.write(centroids, size.cols);
+		// debugCentroids(centroids, size);
+		// They already seem to get randomly initialized
+		initCentroids(rng, centroids, allData, size);
+		// debugCentroids(centroids, size);
+		centroidDebugFile.write(centroids, size.cols);
 
-    AutoAverageTimer timer2("time naïve clustering");
-    timer2.start();
-    bool changed = true;
+		AutoAverageTimer timer2("time naïve clustering");
+		timer2.start();
+		bool changed = true;
 
-    double avgDist = 0;
-    while (changed) {
-      avgDist = 0;
-      // debugCentroidPoints(pointsCentroid);
+		double avgDist = 0;
+		while (changed)
+		{
+			avgDist = 0;
+			// debugCentroidPoints(pointsCentroid);
 
-      // oldCentroids = centroids;
+			// oldCentroids = centroids;
 
-      // std::cout << "Before" << std::endl;
-      // debugCentroids(centroids, size);
-      // naiveCacheClustering(centroids, allData, pointsCentroid, avgDist, size,
-      // changed);
-      // naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
-      //                    changed);
+			// std::cout << "Before" << std::endl;
+			// debugCentroids(centroids, size);
+			// naiveCacheClustering(centroids, allData, pointsCentroid, avgDist, size,
+			// changed);
+			// naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
+			//                    changed);
 
-      naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
-                      changed);
+			naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
+			                changed);
 
-      // std::cout << "After" << std::endl;
-      // debugCentroids(centroids, size);
+			// std::cout << "After" << std::endl;
+			// debugCentroids(centroids, size);
 
-      // std::cout << "Old" << std::endl;
-      // debugCentroids(oldCentroids, size);
+			// std::cout << "Old" << std::endl;
+			// debugCentroids(oldCentroids, size);
 
-      // Write all centroids to file:
-      if (changed) {
+			// Write all centroids to file:
+			if (changed)
+			{
 
-        centroidDebugFile.write(centroids, size.cols);
-      }
-      // Om een of andere reden moet dit er wel uit blijven en nog een keer
-      // geschreven worden
-      clustersDebugFile.write(pointsCentroid, size.rows);
+				centroidDebugFile.write(centroids, size.cols);
+			}
+			// Om een of andere reden moet dit er wel uit blijven en nog een keer
+			// geschreven worden
+			clustersDebugFile.write(pointsCentroid, size.rows);
 
-      numSteps++;
-    }
-    // std::cout << "Best dist: " << bestDistSquaredSum
-    //           << " | avgDist: " << avgDist << std::endl;
-    // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
-    // gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
-    // niet overeenkwam.
-    if (avgDist < bestDistSquaredSum) {
-      // std::cout << "Chose repetition: " << r << std::endl;
+			numSteps++;
+		}
+		// std::cout << "Best dist: " << bestDistSquaredSum
+		//           << " | avgDist: " << avgDist << std::endl;
+		// Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
+		// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
+		// niet overeenkwam.
+		if (avgDist < bestDistSquaredSum)
+		{
+			// std::cout << "Chose repetition: " << r << std::endl;
 
-      bestDistSquaredSum = avgDist;
+			bestDistSquaredSum = avgDist;
 
-      bestCluster = pointsCentroid;
-    }
+			bestCluster = pointsCentroid;
+		}
 
-    // timer.stop();
+		// timer.stop();
 
-    stepsPerRepetition[r] = numSteps;
+		stepsPerRepetition[r] = numSteps;
 
-    // bool changed = true;
-    // while (changed) {
-    //
-    //
-    //
-    // }
+		// bool changed = true;
+		// while (changed) {
+		//
+		//
+		//
+		// }
 
-    // Make sure debug logging is only done on first iteration ; subsequent
-    // checks with is_open will indicate that no logging needs to be done
-    // anymore.
-    centroidDebugFile.close();
-    clustersDebugFile.close();
+		// Make sure debug logging is only done on first iteration ; subsequent
+		// checks with is_open will indicate that no logging needs to be done
+		// anymore.
+		centroidDebugFile.close();
+		clustersDebugFile.close();
 
-    timer2.stop();
-  }
-  timer.stop();
+		timer2.stop();
+	}
+	timer.stop();
 
-  // Some example output, of course you can log your timing data anyway you
-  // like.
-  std::cerr << "# "
-               "Type,blocks,threads,file,seed,clusters,repetitions,"
-               "bestdistsquared,timeinseconds"
-            << std::endl;
-  std::cout << "sequential," << numBlocks << "," << numThreads << ","
-            << inputFile << "," << rng.getUsedSeed() << "," << numClusters
-            << "," << repetitions << "," << bestDistSquaredSum << ","
-            << timer.durationNanoSeconds() / 1e9 << std::endl;
+	// Some example output, of course you can log your timing data anyway you
+	// like.
+	std::cerr << "# "
+	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "bestdistsquared,timeinseconds"
+	          << std::endl;
+	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
+	          << "," << repetitions << "," << bestDistSquaredSum << ","
+	          << timer.durationNanoSeconds() / 1e9 << std::endl;
 
-  // Write the number of steps per repetition, kind of a signature of the work
-  // involved
-  csvOutputFile.write(stepsPerRepetition, "# Steps: ");
-  // Write best clusters to csvOutputFile, something like
-  csvOutputFile.write(bestCluster);
+	// Write the number of steps per repetition, kind of a signature of the work
+	// involved
+	csvOutputFile.write(stepsPerRepetition, "# Steps: ");
+	// Write best clusters to csvOutputFile, something like
+	csvOutputFile.write(bestCluster);
 
-  return 0;
+	return 0;
 }
 
 int kmeansOMP(Rng &rng, const std::string &inputFile,
               const std::string &outputFileName, int numClusters,
               int repetitions, int numBlocks, int numThreads,
               const std::string &centroidDebugFileName,
-              const std::string &clusterDebugFileName) {
+              const std::string &clusterDebugFileName)
+{
 
-  // If debug filenames are specified, this opens them. The is_open method
-  // can be used to check if they are actually open and should be written to.
-  FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
-  FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
+	// If debug filenames are specified, this opens them. The is_open method
+	// can be used to check if they are actually open and should be written to.
+	FileCSVWriter centroidDebugFile = openDebugFile(centroidDebugFileName);
+	FileCSVWriter clustersDebugFile = openDebugFile(clusterDebugFileName);
 
-  // Ik had een probleem eerst dat als de output/ dir nog niet bestaat het
-  // programma niet wilt werken. Dus we zullen eerst checken of de map er is en
-  // deze aanmaken indien nodig
+	// Ik had een probleem eerst dat als de output/ dir nog niet bestaat het
+	// programma niet wilt werken. Dus we zullen eerst checken of de map er is en
+	// deze aanmaken indien nodig
 
-  fs::path dirPath;
+	fs::path dirPath;
 
-  try {
-    dirPath = fs::path(outputFileName).parent_path();
-    if (fs::create_directories(dirPath)) {
-      std::cout << "Created new directory" << std::endl;
-    } else {
-      std::cout << "Directory already exists" << std::endl;
-    }
-  } catch (std::exception e) {
+	try
+	{
+		dirPath = fs::path(outputFileName).parent_path();
+		if (fs::create_directories(dirPath))
+		{
+			std::cout << "Created new directory" << std::endl;
+		}
+		else
+		{
+			std::cout << "Directory already exists" << std::endl;
+		}
+	}
+	catch (std::exception e)
+	{
 
-    std::cout << e.what() << std::endl;
-    // throw e;
-  }
+		std::cout << e.what() << std::endl;
+		// throw e;
+	}
 
-  FileCSVWriter csvOutputFile(outputFileName);
-  if (!csvOutputFile.is_open()) {
-    std::cerr << "Unable to open output file " << outputFileName << std::endl;
-    return -1;
-  }
+	FileCSVWriter csvOutputFile(outputFileName);
+	if (!csvOutputFile.is_open())
+	{
+		std::cerr << "Unable to open output file " << outputFileName << std::endl;
+		return -1;
+	}
 
-  std::ifstream datasetFile;
-  datasetFile.open(inputFile);
-  if (!datasetFile.is_open()) {
-    std::cerr << "Unable to open input file " << inputFile << std::endl;
-    return -1;
-  }
+	std::ifstream datasetFile;
+	datasetFile.open(inputFile);
+	if (!datasetFile.is_open())
+	{
+		std::cerr << "Unable to open input file " << inputFile << std::endl;
+		return -1;
+	}
 
-  std::vector<double> allData;
-  DataSize size = readData(datasetFile, allData);
+	std::vector<double> allData;
+	DataSize size = readData(datasetFile, allData);
 
-  // This is a basic timer from std::chrono ; feel free to use the appropriate
-  // timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
-  Timer timer;
+	// This is a basic timer from std::chrono ; feel free to use the appropriate
+	// timer for each of the technologies, e.g. OpenMP has omp_get_wtime()
+	Timer timer;
 
-  double bestDistSquaredSum =
-      std::numeric_limits<double>::max(); // can only get better
-  std::vector<int> bestCluster(size.rows);
-  std::vector<size_t> stepsPerRepetition(
-      repetitions); // to save the number of steps each rep needed
+	double bestDistSquaredSum =
+	    std::numeric_limits<double>::max(); // can only get better
+	std::vector<int> bestCluster(size.rows);
+	std::vector<size_t> stepsPerRepetition(
+	    repetitions); // to save the number of steps each rep needed
 
-  // We calculate the min and max bounds so we can more efficiëntly set up the
-  // random centroids
-  std::vector<std::vector<double>> centroids(
-      repetitions, std::vector<double>(numClusters * size.cols));
-  std::vector<double> oldCentroids(numClusters * size.cols);
+	// We calculate the min and max bounds so we can more efficiëntly set up the
+	// random centroids
+	std::vector<std::vector<double>> centroids(
+	    repetitions, std::vector<double>(numClusters * size.cols));
+	std::vector<double> oldCentroids(numClusters * size.cols);
 
-  std::vector<std::vector<std::vector<double>>> centroidsDebug(repetitions);
-  std::vector<std::vector<std::vector<int>>> clustersDebug(repetitions);
+	std::vector<std::vector<std::vector<double>>> centroidsDebug(repetitions);
+	std::vector<std::vector<std::vector<int>>> clustersDebug(repetitions);
 
-  // Also a list to keep track of which points where assigned to what centroid
-  std::vector<std::vector<int>> pointsCentroid(repetitions,
-                                               std::vector<int>(size.rows));
+	// Also a list to keep track of which points where assigned to what centroid
+	std::vector<std::vector<int>> pointsCentroid(repetitions,
+	                                             std::vector<int>(size.rows));
 
-  // Do the k-means routine a number of times, each time starting from
-  // different random centroids (use Rng::pickRandomIndices), and keep
-  // the best result of these repetitions.
+	// Do the k-means routine a number of times, each time starting from
+	// different random centroids (use Rng::pickRandomIndices), and keep
+	// the best result of these repetitions.
 
-  timer.start();
+	timer.start();
 
-  if (numThreads != 0)
-    omp_set_num_threads(numThreads);
+	// int outerThreads = numThreads;
+	//  if (numThreads != 0)
+	// 	outerThreads = std::min(numThreads, repetitions);
+	//
+	//  int innerLoopThreads = (numThreads - repetitions) / repetitions + 1;
 
-  int innerLoopThreads = 1 + (numThreads - repetitions) / repetitions;
+#ifdef HAVE_OMP
+	omp_set_num_threads(numThreads);
+#endif
+	// omp_set_max_active_levels(2);
 
-  // Hier definiëren want in de loop zorgt dit voor heel random waarden (niet
-  // echt meetbaar)
-  for (int i = 0; i < repetitions; i++) {
-    pointsCentroid[i].assign(allData.size() / size.cols, -1);
+	// Hier definiëren want in de loop zorgt dit voor heel random waarden (niet
+	// echt meetbaar)
+	for (int i = 0; i < repetitions; i++)
+	{
+		pointsCentroid[i].assign(allData.size() / size.cols, -1);
 
-    // debugCentroids(centroids, size);
-    // They already seem to get randomly initialized
-    initCentroids(rng, centroids[i], allData, size);
-  }
+		// debugCentroids(centroids, size);
+		// They already seem to get randomly initialized
+		initCentroids(rng, centroids[i], allData, size);
+	}
 
-#pragma omp parallel for schedule(guided)
-  for (int r = 0; r < repetitions; r++) {
-    size_t numSteps = 0;
+	// #pragma omp parallel for num_threads(outerThreads) schedule(guided)
+	for (int r = 0; r < repetitions; r++)
+	{
+		size_t numSteps = 0;
 
-    // debugCentroids(centroids, size);
-    // TODO: Vervangen door een Vector
-    // centroidDebugFile.write(centroids, size.cols);
-    centroidsDebug[r].push_back(centroids[r]);
+		// debugCentroids(centroids, size);
+		// TODO: Vervangen door een Vector
+		// centroidDebugFile.write(centroids, size.cols);
+		centroidsDebug[r].push_back(centroids[r]);
 
-    AutoAverageTimer timer2("time naïve clustering");
-    timer2.start();
+		AutoAverageTimer timer2("time naïve clustering");
+		timer2.start();
 
-    bool changed = true;
-    double avgDist = 0;
-    do {
+		bool changed = true;
+		double avgDist = 0;
+		do
+		{
 
-      avgDist = 0;
-      // debugCentroidPoints(pointsCentroid);
+			avgDist = 0;
+			// debugCentroidPoints(pointsCentroid);
 
-      // oldCentroids = centroids;
+			// oldCentroids = centroids;
 
-      // std::cout << "Before" << std::endl;
-      // debugCentroids(centroids, size);
-      // naiveCacheClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-      // size, changed);
-      naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-                         size, changed, innerLoopThreads);
+			// std::cout << "Before" << std::endl;
+			// debugCentroids(centroids, size);
+			// naiveCacheClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+			// size, changed);
+			naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+			                   size, changed, 0);
 
-      // naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-      // size, changed);
+			// naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+			// size, changed);
 
-      // Write all centroids to file:
-      // Even disablen want dit zou raceconditions veroorzaken
-      if (changed) {
+			// Write all centroids to file:
+			// Even disablen want dit zou raceconditions veroorzaken
+			if (changed)
+			{
 
-        centroidsDebug[r].push_back(centroids[r]);
-        // centroidDebugFile.write(centroids, size.cols);
-      }
-      // Om een of andere reden moet dit er wel uit blijven en nog een keer
-      // geschreven worden
-      // Even disablen want dit zou racecondigtions veroorzaken.
-      // TODO: Vervangen door een array met wat te schrijven?
-      // clustersDebugFile.write(pointsCentroid, size.rows);
+				centroidsDebug[r].push_back(centroids[r]);
+				// centroidDebugFile.write(centroids, size.cols);
+			}
+			// Om een of andere reden moet dit er wel uit blijven en nog een keer
+			// geschreven worden
+			// Even disablen want dit zou racecondigtions veroorzaken.
+			// TODO: Vervangen door een array met wat te schrijven?
+			// clustersDebugFile.write(pointsCentroid, size.rows);
 			clustersDebug[r].push_back(pointsCentroid[r]);
 
-      numSteps++;
-    } while (changed);
+			numSteps++;
+		} while (changed);
 
-    // std::cout << "Loop completed" << std::endl;
-    // std::cout << "Best dist: " << bestDistSquaredSum
-    //           << " | avgDist: " << avgDist << std::endl;
-    // Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
-    // gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
-    // niet overeenkwam.
-    if (avgDist < bestDistSquaredSum) {
-      // std::cout << "Chose repetition: " << r << std::endl;
+		// std::cout << "Loop completed" << std::endl;
+		// std::cout << "Best dist: " << bestDistSquaredSum
+		//           << " | avgDist: " << avgDist << std::endl;
+		// Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
+		// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
+		// niet overeenkwam.
 
 #pragma omp critical
-      {
-        bestDistSquaredSum = avgDist;
 
-        bestCluster = pointsCentroid[r];
-      }
-    }
+		{
+			if (avgDist < bestDistSquaredSum)
+			{
+				// std::cout << "Chose repetition: " << r << std::endl;
 
-    // timer.stop();
+				bestDistSquaredSum = avgDist;
 
-    // This shouldn't create race conditions as it accesses a different spot of
-    // the vector for a repetition
-    stepsPerRepetition[r] = numSteps;
+				bestCluster = pointsCentroid[r];
+			}
+		}
 
-    // bool changed = true;
-    // while (changed) {
-    //
-    //
-    //
-    // }
+		// timer.stop();
 
-    
+		// This shouldn't create race conditions as it accesses a different spot of
+		// the vector for a repetition
+		stepsPerRepetition[r] = numSteps;
 
-    timer2.stop();
-  }
-  timer.stop();
+		// bool changed = true;
+		// while (changed) {
+		//
+		//
+		//
+		// }
 
-  // Hier moeten we ook nog even alles uit de nieuwe vectors halen en schrijven
-  // naar de files
-  for (int r = 0; r < 1; r++) {
-    // Eerst de centroidsDebug
-		for(int i = 0; i < centroidsDebug[r].size(); i++){
+		timer2.stop();
+	}
+	timer.stop();
+
+	// Hier moeten we ook nog even alles uit de nieuwe vectors halen en schrijven
+	// naar de files
+	for (int r = 0; r < 1; r++)
+	{
+		// Eerst de centroidsDebug
+		for (size_t i = 0; i < centroidsDebug[r].size(); i++)
+		{
 			centroidDebugFile.write(centroidsDebug[r][i], size.cols);
 		}
 
-		for(int i = 0; i < clustersDebug[r].size(); i++){
+		for (size_t i = 0; i < clustersDebug[r].size(); i++)
+		{
 			clustersDebugFile.write(clustersDebug[r][i], size.rows);
 		}
-  }
-// Make sure debug logging is only done on first iteration ; subsequent
-    // checks with is_open will indicate that no logging needs to be done
-    // anymore.
-    centroidDebugFile.close();
-    clustersDebugFile.close();
+	}
+	// Make sure debug logging is only done on first iteration ; subsequent
+	// checks with is_open will indicate that no logging needs to be done
+	// anymore.
+	centroidDebugFile.close();
+	clustersDebugFile.close();
 
-  // Some example output, of course you can log your timing data anyway you
-  // like.
-  std::cerr << "# "
-               "Type,blocks,threads,file,seed,clusters,repetitions,"
-               "bestdistsquared,timeinseconds"
-            << std::endl;
-  std::cout << "sequential," << numBlocks << "," << numThreads << ","
-            << inputFile << "," << rng.getUsedSeed() << "," << numClusters
-            << "," << repetitions << "," << bestDistSquaredSum << ","
-            << timer.durationNanoSeconds() / 1e9 << std::endl;
+	// Some example output, of course you can log your timing data anyway you
+	// like.
+	std::cerr << "# "
+	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "bestdistsquared,timeinseconds"
+	          << std::endl;
+	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
+	          << "," << repetitions << "," << bestDistSquaredSum << ","
+	          << timer.durationNanoSeconds() / 1e9 << std::endl;
 
-  // Write the number of steps per repetition, kind of a signature of the work
-  // involved
-  csvOutputFile.write(stepsPerRepetition, "# Steps: ");
-  // Write best clusters to csvOutputFile, something like
-  csvOutputFile.write(bestCluster);
+	// Write the number of steps per repetition, kind of a signature of the work
+	// involved
+	csvOutputFile.write(stepsPerRepetition, "# Steps: ");
+	// Write best clusters to csvOutputFile, something like
+	csvOutputFile.write(bestCluster);
 
-  return 0;
+	return 0;
 }

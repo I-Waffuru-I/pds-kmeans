@@ -14,7 +14,7 @@ OUTPUT := output
 
 ARGS ?= --input $(DATA)/100000x5.csv \
 	--output $(OUTPUT)/output.csv \
-	--repetitions 5 --k 10 \
+	--repetitions 20 --k 10 \
 	--seed 1337
 
 # Find all .cpp files in src/ and libs/

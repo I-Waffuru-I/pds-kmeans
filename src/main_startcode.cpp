@@ -2,17 +2,20 @@
 #include "rng.h"
 #include <cstdlib>
 #include <iostream>
+
+#ifdef HAVE_OMP
 #include <omp.h>
+#endif
 #include <string>
 #include <vector>
-
 
 // Ik zag dat is gebruikt worden deze structuur en wat dat eens proberen
 // filesystem is blijkbaar pas geïntroduceerd vanaf cpp17 dus dat pas ik even
 // aan
 
-void usage() {
-  std::cerr << R"XYZ(
+void usage()
+{
+	std::cerr << R"XYZ(
 Usage:
 
   kmeans --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--blocks numblocks] [--threads numthreads] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
@@ -79,79 +82,80 @@ Arguments:
    file first logs the randomly chosen centroids from the input data, and for
    each step in the sequence, the updated centroids are logged. The program 
    'visualize_centroids.py' can be used to visualize how the centroids change.
+
+--mode:
+	This indicates a certain MODE we want to test. Like OMP, Serial/default, CUDA or MPI. We will check if the argument "contains" this mode word and will provide more testing modes in them as well.
+	Like omp-1, and will propagate that argument through the functions.
    
 )XYZ";
-  exit(-1);
+	exit(-1);
 }
-
-
-
-
-
-
 
 int kmeans(Rng &rng, const std::string &inputFile,
            const std::string &outputFileName, int numClusters, int repetitions,
            int numBlocks, int numThreads,
            const std::string &centroidDebugFileName,
-           const std::string &clusterDebugFileName) {
+           const std::string &clusterDebugFileName)
+{
 
-  // return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
-  return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName); 
+	// return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName);
+	return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName);
 }
 
+int mainCxx(const std::vector<std::string> &args)
+{
+	if (args.size() % 2 != 0)
+		usage();
 
+	std::string inputFileName, outputFileName, centroidTraceFileName,
+	    clusterTraceFileName;
+	unsigned long seed = 54030599202;
 
-int mainCxx(const std::vector<std::string> &args) {
-  if (args.size() % 2 != 0)
-    usage();
+	int numClusters = -1, repetitions = -1;
+	int numBlocks = 1, numThreads = 1;
+	for (int i = 0; i < args.size(); i += 2)
+	{
+		if (args[i] == "--input")
+			inputFileName = args[i + 1];
+		else if (args[i] == "--output")
+			outputFileName = args[i + 1];
+		else if (args[i] == "--centroidtrace")
+			centroidTraceFileName = args[i + 1];
+		else if (args[i] == "--trace")
+			clusterTraceFileName = args[i + 1];
+		else if (args[i] == "--k")
+			numClusters = stoi(args[i + 1]);
+		else if (args[i] == "--repetitions")
+			repetitions = stoi(args[i + 1]);
+		else if (args[i] == "--seed")
+			seed = stoul(args[i + 1]);
+		else if (args[i] == "--blocks")
+			numBlocks = stoi(args[i + 1]);
+		else if (args[i] == "--threads")
+			numThreads = stoi(args[i + 1]);
+		else
+		{
+			std::cerr << "Unknown argument '" << args[i] << "'" << std::endl;
+			return -1;
+		}
+	}
 
-  std::string inputFileName, outputFileName, centroidTraceFileName,
-      clusterTraceFileName;
-  unsigned long seed = 54030599202;
+	if (inputFileName.length() == 0 || outputFileName.length() == 0 ||
+	    numClusters < 1 || repetitions < 1 || seed == 0)
+		usage();
 
-  int numClusters = -1, repetitions = -1;
-  int numBlocks = 1, numThreads = 1;
-  for (int i = 0; i < args.size(); i += 2) {
-    if (args[i] == "--input")
-      inputFileName = args[i + 1];
-    else if (args[i] == "--output")
-      outputFileName = args[i + 1];
-    else if (args[i] == "--centroidtrace")
-      centroidTraceFileName = args[i + 1];
-    else if (args[i] == "--trace")
-      clusterTraceFileName = args[i + 1];
-    else if (args[i] == "--k")
-      numClusters = stoi(args[i + 1]);
-    else if (args[i] == "--repetitions")
-      repetitions = stoi(args[i + 1]);
-    else if (args[i] == "--seed")
-      seed = stoul(args[i + 1]);
-    else if (args[i] == "--blocks")
-      numBlocks = stoi(args[i + 1]);
-    else if (args[i] == "--threads")
-      numThreads = stoi(args[i + 1]);
-    else {
-      std::cerr << "Unknown argument '" << args[i] << "'" << std::endl;
-      return -1;
-    }
-  }
+	Rng rng(seed);
 
-  if (inputFileName.length() == 0 || outputFileName.length() == 0 ||
-      numClusters < 1 || repetitions < 1 || seed == 0)
-    usage();
-
-  Rng rng(seed);
-
-  return kmeans(rng, inputFileName, outputFileName, numClusters, repetitions,
-                numBlocks, numThreads, centroidTraceFileName,
-                clusterTraceFileName);
+	return kmeans(rng, inputFileName, outputFileName, numClusters, repetitions,
+	              numBlocks, numThreads, centroidTraceFileName,
+	              clusterTraceFileName);
 }
 
-int main(int argc, char *argv[]) {
-  std::vector<std::string> args;
-  for (int i = 1; i < argc; i++)
-    args.push_back(argv[i]);
+int main(int argc, char *argv[])
+{
+	std::vector<std::string> args;
+	for (int i = 1; i < argc; i++)
+		args.push_back(argv[i]);
 
-  return mainCxx(args);
+	return mainCxx(args);
 }
