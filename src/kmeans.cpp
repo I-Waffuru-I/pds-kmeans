@@ -103,8 +103,8 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 		// debugCentroids(centroids, size);
 		centroidDebugFile.write(centroids, size.cols);
 
-		AutoAverageTimer timer2("time naïve clustering");
-		timer2.start();
+		// AutoAverageTimer timer2("time naïve clustering");
+		// timer2.start();
 		bool changed = true;
 
 		double avgDist = 0;
@@ -178,17 +178,17 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 		centroidDebugFile.close();
 		clustersDebugFile.close();
 
-		timer2.stop();
+		// timer2.stop();
 	}
 	timer.stop();
 
 	// Some example output, of course you can log your timing data anyway you
 	// like.
 	std::cerr << "# "
-	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "Type,Submode,blocks,threads,file,seed,clusters,repetitions,"
 	             "bestdistsquared,timeinseconds"
 	          << std::endl;
-	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	std::cout << "sequential," << mode << "," << numBlocks << "," << numThreads << ","
 	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
 	          << "," << repetitions << "," << bestDistSquaredSum << ","
 	          << timer.durationNanoSeconds() / 1e9 << std::endl;
@@ -319,8 +319,8 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		// centroidDebugFile.write(centroids, size.cols);
 		centroidsDebug[r].push_back(centroids[r]);
 
-		AutoAverageTimer timer2("time naïve clustering");
-		timer2.start();
+		// AutoAverageTimer timer2("time naïve clustering");
+		// timer2.start();
 
 		bool changed = true;
 		double avgDist = 0;
@@ -403,7 +403,7 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		//
 		// }
 
-		timer2.stop();
+		// timer2.stop();
 	}
 	timer.stop();
 
@@ -431,10 +431,10 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 	// Some example output, of course you can log your timing data anyway you
 	// like.
 	std::cerr << "# "
-	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "Type,Submode,blocks,threads,file,seed,clusters,repetitions,"
 	             "bestdistsquared,timeinseconds"
 	          << std::endl;
-	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	std::cout << "parallel," << mode << "," << numBlocks << "," << numThreads << ","
 	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
 	          << "," << repetitions << "," << bestDistSquaredSum << ","
 	          << timer.durationNanoSeconds() / 1e9 << std::endl;
