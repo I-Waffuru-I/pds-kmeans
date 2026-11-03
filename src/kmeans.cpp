@@ -17,7 +17,8 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
                  const std::string &outputFileName, int numClusters,
                  int repetitions, int numBlocks, int numThreads,
                  const std::string &centroidDebugFileName,
-                 const std::string &clusterDebugFileName)
+                 const std::string &clusterDebugFileName,
+                 const std::string &mode)
 {
 
 	// If debug filenames are specified, this opens them. The is_open method
@@ -116,13 +117,17 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 
 			// std::cout << "Before" << std::endl;
 			// debugCentroids(centroids, size);
-			// naiveCacheClustering(centroids, allData, pointsCentroid, avgDist, size,
-			// changed);
-			// naiveOMPClustering(centroids, allData, pointsCentroid, avgDist, size,
-			//                    changed);
-
-			naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
-			                changed);
+			// Not a lot of different onces for now, maybe eventually give the mode to the clustering as well and change behavior from there
+			if (mode == "serial")
+			{
+				naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
+				                changed);
+			}
+			else
+			{
+				naiveClustering(centroids, allData, pointsCentroid, avgDist, size,
+				                changed);
+			}
 
 			// std::cout << "After" << std::endl;
 			// debugCentroids(centroids, size);
@@ -201,7 +206,8 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
               const std::string &outputFileName, int numClusters,
               int repetitions, int numBlocks, int numThreads,
               const std::string &centroidDebugFileName,
-              const std::string &clusterDebugFileName)
+              const std::string &clusterDebugFileName,
+              const std::string &mode)
 {
 
 	// If debug filenames are specified, this opens them. The is_open method
@@ -303,7 +309,7 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		initCentroids(rng, centroids[i], allData, size);
 	}
 
-	// #pragma omp parallel for num_threads(outerThreads) schedule(guided)
+#pragma omp parallel for schedule(guided) if (mode == "omp-outer" || mode == "omp-nested")
 	for (int r = 0; r < repetitions; r++)
 	{
 		size_t numSteps = 0;
@@ -328,13 +334,18 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 
 			// std::cout << "Before" << std::endl;
 			// debugCentroids(centroids, size);
-			// naiveCacheClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-			// size, changed);
-			naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-			                   size, changed, 0);
-
-			// naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-			// size, changed);
+			if (mode == "omp-outeronly")
+			{
+				// Route to omp-outeronly implementation when added
+				naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+				                size, changed);
+			}
+			else
+			{
+				// Default OMP mode: "omp" or "omp-naive"
+				naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+				                   size, changed, 0);
+			}
 
 			// Write all centroids to file:
 			// Even disablen want dit zou raceconditions veroorzaken

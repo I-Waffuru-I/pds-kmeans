@@ -41,7 +41,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 # Enable OpenMP support
-omp: CXXFLAGS += -fopenmp
+omp: CXXFLAGS += -fopenmp -DHAVE_OMP
 omp: LDFLAGS += -fopenmp
 omp: $(TARGET)
 

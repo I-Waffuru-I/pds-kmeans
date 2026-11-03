@@ -18,7 +18,7 @@ void usage()
 	std::cerr << R"XYZ(
 Usage:
 
-  kmeans --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--blocks numblocks] [--threads numthreads] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
+  kmeans --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--mode mode] [--blocks numblocks] [--threads numthreads] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
 
 Arguments:
 
@@ -83,9 +83,18 @@ Arguments:
    each step in the sequence, the updated centroids are logged. The program 
    'visualize_centroids.py' can be used to visualize how the centroids change.
 
---mode:
-	This indicates a certain MODE we want to test. Like OMP, Serial/default, CUDA or MPI. We will check if the argument "contains" this mode word and will provide more testing modes in them as well.
-	Like omp-1, and will propagate that argument through the functions.
+ --mode:
+
+   Specifies which implementation / subtest mode to run (default: serial).
+   Available modes:
+     - serial        : Default sequential implementation (naiveClustering)
+     - serial-naive  : Sequential naive implementation (naiveClustering)
+     - omp           : Default OpenMP implementation (naiveOMPClustering)
+     - omp-outeronly : Uses OMP for the outer loop but the serial implementation for the inner loop (naiveClustering) 
+     - omp-naive     : OpenMP naive implementation (naiveOMPClustering)
+     - omp-2         : OpenMP alternative implementation 2
+     - mpi           : MPI implementation
+     - cuda          : CUDA implementation
    
 )XYZ";
 	exit(-1);
@@ -95,11 +104,37 @@ int kmeans(Rng &rng, const std::string &inputFile,
            const std::string &outputFileName, int numClusters, int repetitions,
            int numBlocks, int numThreads,
            const std::string &centroidDebugFileName,
-           const std::string &clusterDebugFileName)
+           const std::string &clusterDebugFileName,
+           const std::string &mode)
 {
-
-	// return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName);
-	return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions, numBlocks, numThreads, centroidDebugFileName, clusterDebugFileName);
+	if (mode.find("omp") != std::string::npos)
+	{
+		return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions,
+		                 numBlocks, numThreads, centroidDebugFileName,
+		                 clusterDebugFileName, mode);
+	}
+	else if (mode.find("serial") != std::string::npos)
+	{
+		return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions,
+		                    numBlocks, numThreads, centroidDebugFileName,
+		                    clusterDebugFileName, mode);
+	}
+	else if (mode.find("mpi") != std::string::npos)
+	{
+		std::cerr << "MPI mode ('" << mode << "') is not implemented yet." << std::endl;
+		return -1;
+	}
+	else if (mode.find("cuda") != std::string::npos)
+	{
+		std::cerr << "CUDA mode ('" << mode << "') is not implemented yet." << std::endl;
+		return -1;
+	}
+	else
+	{
+		std::cerr << "Unknown mode '" << mode << "'" << std::endl;
+		usage();
+		return -1;
+	}
 }
 
 int mainCxx(const std::vector<std::string> &args)
@@ -109,6 +144,7 @@ int mainCxx(const std::vector<std::string> &args)
 
 	std::string inputFileName, outputFileName, centroidTraceFileName,
 	    clusterTraceFileName;
+	std::string mode = "serial";
 	unsigned long seed = 54030599202;
 
 	int numClusters = -1, repetitions = -1;
@@ -133,6 +169,8 @@ int mainCxx(const std::vector<std::string> &args)
 			numBlocks = stoi(args[i + 1]);
 		else if (args[i] == "--threads")
 			numThreads = stoi(args[i + 1]);
+		else if (args[i] == "--mode")
+			mode = args[i + 1];
 		else
 		{
 			std::cerr << "Unknown argument '" << args[i] << "'" << std::endl;
@@ -148,7 +186,7 @@ int mainCxx(const std::vector<std::string> &args)
 
 	return kmeans(rng, inputFileName, outputFileName, numClusters, repetitions,
 	              numBlocks, numThreads, centroidTraceFileName,
-	              clusterTraceFileName);
+	              clusterTraceFileName, mode);
 }
 
 int main(int argc, char *argv[])
