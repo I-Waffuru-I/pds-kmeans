@@ -1,0 +1,179 @@
+=== dataset mouse_500x2 ===
+PASS  mouse_500x2: serial == serial-naive
+PASS  mouse_500x2: omp threads=1 try=1 vs serial
+PASS  mouse_500x2: omp threads=1 try=2 vs serial
+PASS  mouse_500x2: omp threads=1 try=3 vs serial
+PASS  mouse_500x2: omp threads=1 try=4 vs serial
+PASS  mouse_500x2: omp threads=1 try=5 vs serial
+PASS  mouse_500x2: omp threads=2 try=1 vs serial
+PASS  mouse_500x2: omp threads=2 try=2 vs serial
+PASS  mouse_500x2: omp threads=2 try=3 vs serial
+PASS  mouse_500x2: omp threads=2 try=4 vs serial
+PASS  mouse_500x2: omp threads=2 try=5 vs serial
+PASS  mouse_500x2: omp threads=4 try=1 vs serial
+PASS  mouse_500x2: omp threads=4 try=2 vs serial
+PASS  mouse_500x2: omp threads=4 try=3 vs serial
+PASS  mouse_500x2: omp threads=4 try=4 vs serial
+PASS  mouse_500x2: omp threads=4 try=5 vs serial
+PASS  mouse_500x2: omp threads=8 try=1 vs serial
+PASS  mouse_500x2: omp threads=8 try=2 vs serial
+PASS  mouse_500x2: omp threads=8 try=3 vs serial
+PASS  mouse_500x2: omp threads=8 try=4 vs serial
+PASS  mouse_500x2: omp threads=8 try=5 vs serial
+PASS  mouse_500x2: omp-naive threads=1 try=1 vs serial
+PASS  mouse_500x2: omp-naive threads=1 try=2 vs serial
+PASS  mouse_500x2: omp-naive threads=1 try=3 vs serial
+PASS  mouse_500x2: omp-naive threads=1 try=4 vs serial
+PASS  mouse_500x2: omp-naive threads=1 try=5 vs serial
+PASS  mouse_500x2: omp-naive threads=2 try=1 vs serial
+PASS  mouse_500x2: omp-naive threads=2 try=2 vs serial
+PASS  mouse_500x2: omp-naive threads=2 try=3 vs serial
+PASS  mouse_500x2: omp-naive threads=2 try=4 vs serial
+PASS  mouse_500x2: omp-naive threads=2 try=5 vs serial
+PASS  mouse_500x2: omp-naive threads=4 try=1 vs serial
+PASS  mouse_500x2: omp-naive threads=4 try=2 vs serial
+PASS  mouse_500x2: omp-naive threads=4 try=3 vs serial
+PASS  mouse_500x2: omp-naive threads=4 try=4 vs serial
+PASS  mouse_500x2: omp-naive threads=4 try=5 vs serial
+PASS  mouse_500x2: omp-naive threads=8 try=1 vs serial
+PASS  mouse_500x2: omp-naive threads=8 try=2 vs serial
+PASS  mouse_500x2: omp-naive threads=8 try=3 vs serial
+PASS  mouse_500x2: omp-naive threads=8 try=4 vs serial
+PASS  mouse_500x2: omp-naive threads=8 try=5 vs serial
+PASS  mouse_500x2: omp-2 threads=1 try=1 vs serial
+PASS  mouse_500x2: omp-2 threads=1 try=2 vs serial
+PASS  mouse_500x2: omp-2 threads=1 try=3 vs serial
+PASS  mouse_500x2: omp-2 threads=1 try=4 vs serial
+PASS  mouse_500x2: omp-2 threads=1 try=5 vs serial
+PASS  mouse_500x2: omp-2 threads=2 try=1 vs serial
+PASS  mouse_500x2: omp-2 threads=2 try=2 vs serial
+PASS  mouse_500x2: omp-2 threads=2 try=3 vs serial
+PASS  mouse_500x2: omp-2 threads=2 try=4 vs serial
+PASS  mouse_500x2: omp-2 threads=2 try=5 vs serial
+PASS  mouse_500x2: omp-2 threads=4 try=1 vs serial
+PASS  mouse_500x2: omp-2 threads=4 try=2 vs serial
+PASS  mouse_500x2: omp-2 threads=4 try=3 vs serial
+PASS  mouse_500x2: omp-2 threads=4 try=4 vs serial
+PASS  mouse_500x2: omp-2 threads=4 try=5 vs serial
+PASS  mouse_500x2: omp-2 threads=8 try=1 vs serial
+PASS  mouse_500x2: omp-2 threads=8 try=2 vs serial
+PASS  mouse_500x2: omp-2 threads=8 try=3 vs serial
+PASS  mouse_500x2: omp-2 threads=8 try=4 vs serial
+PASS  mouse_500x2: omp-2 threads=8 try=5 vs serial
+PASS  mouse_500x2: omp-outer threads=1 try=1 vs serial
+PASS  mouse_500x2: omp-outer threads=1 try=2 vs serial
+PASS  mouse_500x2: omp-outer threads=1 try=3 vs serial
+PASS  mouse_500x2: omp-outer threads=1 try=4 vs serial
+PASS  mouse_500x2: omp-outer threads=1 try=5 vs serial
+PASS  mouse_500x2: omp-outer threads=2 try=1 vs serial
+PASS  mouse_500x2: omp-outer threads=2 try=2 vs serial
+PASS  mouse_500x2: omp-outer threads=2 try=3 vs serial
+PASS  mouse_500x2: omp-outer threads=2 try=4 vs serial
+PASS  mouse_500x2: omp-outer threads=2 try=5 vs serial
+PASS  mouse_500x2: omp-outer threads=4 try=1 vs serial
+PASS  mouse_500x2: omp-outer threads=4 try=2 vs serial
+PASS  mouse_500x2: omp-outer threads=4 try=3 vs serial
+PASS  mouse_500x2: omp-outer threads=4 try=4 vs serial
+PASS  mouse_500x2: omp-outer threads=4 try=5 vs serial
+PASS  mouse_500x2: omp-outer threads=8 try=1 vs serial
+PASS  mouse_500x2: omp-outer threads=8 try=2 vs serial
+PASS  mouse_500x2: omp-outer threads=8 try=3 vs serial
+PASS  mouse_500x2: omp-outer threads=8 try=4 vs serial
+PASS  mouse_500x2: omp-outer threads=8 try=5 vs serial
+PASS  mouse_500x2: omp-nested threads=1 try=1 vs serial
+PASS  mouse_500x2: omp-nested threads=1 try=2 vs serial
+PASS  mouse_500x2: omp-nested threads=1 try=3 vs serial
+PASS  mouse_500x2: omp-nested threads=1 try=4 vs serial
+PASS  mouse_500x2: omp-nested threads=1 try=5 vs serial
+PASS  mouse_500x2: omp-nested threads=2 try=1 vs serial
+PASS  mouse_500x2: omp-nested threads=2 try=2 vs serial
+PASS  mouse_500x2: omp-nested threads=2 try=3 vs serial
+PASS  mouse_500x2: omp-nested threads=2 try=4 vs serial
+PASS  mouse_500x2: omp-nested threads=2 try=5 vs serial
+PASS  mouse_500x2: omp-nested threads=4 try=1 vs serial
+PASS  mouse_500x2: omp-nested threads=4 try=2 vs serial
+PASS  mouse_500x2: omp-nested threads=4 try=3 vs serial
+PASS  mouse_500x2: omp-nested threads=4 try=4 vs serial
+PASS  mouse_500x2: omp-nested threads=4 try=5 vs serial
+PASS  mouse_500x2: omp-nested threads=8 try=1 vs serial
+PASS  mouse_500x2: omp-nested threads=8 try=2 vs serial
+PASS  mouse_500x2: omp-nested threads=8 try=3 vs serial
+PASS  mouse_500x2: omp-nested threads=8 try=4 vs serial
+PASS  mouse_500x2: omp-nested threads=8 try=5 vs serial
+PASS  mouse_500x2: omp-outeronly threads=1 try=1 vs serial
+PASS  mouse_500x2: omp-outeronly threads=1 try=2 vs serial
+PASS  mouse_500x2: omp-outeronly threads=1 try=3 vs serial
+PASS  mouse_500x2: omp-outeronly threads=1 try=4 vs serial
+PASS  mouse_500x2: omp-outeronly threads=1 try=5 vs serial
+PASS  mouse_500x2: omp-outeronly threads=2 try=1 vs serial
+PASS  mouse_500x2: omp-outeronly threads=2 try=2 vs serial
+PASS  mouse_500x2: omp-outeronly threads=2 try=3 vs serial
+PASS  mouse_500x2: omp-outeronly threads=2 try=4 vs serial
+PASS  mouse_500x2: omp-outeronly threads=2 try=5 vs serial
+PASS  mouse_500x2: omp-outeronly threads=4 try=1 vs serial
+PASS  mouse_500x2: omp-outeronly threads=4 try=2 vs serial
+PASS  mouse_500x2: omp-outeronly threads=4 try=3 vs serial
+PASS  mouse_500x2: omp-outeronly threads=4 try=4 vs serial
+PASS  mouse_500x2: omp-outeronly threads=4 try=5 vs serial
+PASS  mouse_500x2: omp-outeronly threads=8 try=1 vs serial
+PASS  mouse_500x2: omp-outeronly threads=8 try=2 vs serial
+PASS  mouse_500x2: omp-outeronly threads=8 try=3 vs serial
+PASS  mouse_500x2: omp-outeronly threads=8 try=4 vs serial
+PASS  mouse_500x2: omp-outeronly threads=8 try=5 vs serial
+=== dataset 100000x5 ===
+PASS  100000x5: serial == serial-naive
+PASS  100000x5: omp threads=1 try=1 vs serial
+PASS  100000x5: omp threads=2 try=1 vs serial
+PASS  100000x5: omp threads=4 try=1 vs serial
+PASS  100000x5: omp threads=8 try=1 vs serial
+PASS  100000x5: omp-naive threads=1 try=1 vs serial
+FAIL  100000x5: omp-naive threads=2 try=1 vs serial
+FAIL  100000x5: omp-naive threads=4 try=1 vs serial
+FAIL  100000x5: omp-naive threads=8 try=1 vs serial
+PASS  100000x5: omp-2 threads=1 try=1 vs serial
+PASS  100000x5: omp-2 threads=2 try=1 vs serial
+PASS  100000x5: omp-2 threads=4 try=1 vs serial
+PASS  100000x5: omp-2 threads=8 try=1 vs serial
+PASS  100000x5: omp-outer threads=1 try=1 vs serial
+PASS  100000x5: omp-outer threads=2 try=1 vs serial
+PASS  100000x5: omp-outer threads=4 try=1 vs serial
+PASS  100000x5: omp-outer threads=8 try=1 vs serial
+PASS  100000x5: omp-nested threads=1 try=1 vs serial
+PASS  100000x5: omp-nested threads=2 try=1 vs serial
+PASS  100000x5: omp-nested threads=4 try=1 vs serial
+PASS  100000x5: omp-nested threads=8 try=1 vs serial
+PASS  100000x5: omp-outeronly threads=1 try=1 vs serial
+PASS  100000x5: omp-outeronly threads=2 try=1 vs serial
+PASS  100000x5: omp-outeronly threads=4 try=1 vs serial
+PASS  100000x5: omp-outeronly threads=8 try=1 vs serial
+=== compare.py (omp-naive and omp, 4 threads) ===
+
+compare.py kmeans1|SKIP kmeans2|SKIP --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--threads numthread] [--blocks numblocks] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
+
+This runs two kmeans executables, and compares their output files. The rest
+of the arguments are passed on to the executables themselves, but with a
+slight modification: the output filenames for the first executable get an
+extra '.1' suffix, those for the second executable get '.2'.
+
+If an executable name is 'SKIP', the output files for that run are assumed
+to exist already and no program is executed. This can save some time when
+developing/testing a new program, to compare it multiple times to the same
+reference output.
+
+
+FAIL  compare.py serial vs omp-naive
+
+compare.py kmeans1|SKIP kmeans2|SKIP --input inputfile.csv --output outputfile.csv --k numclusters --repetitions numrepetitions --seed seed [--threads numthread] [--blocks numblocks] [--trace clusteridxdebug.csv] [--centroidtrace centroiddebug.csv]
+
+This runs two kmeans executables, and compares their output files. The rest
+of the arguments are passed on to the executables themselves, but with a
+slight modification: the output filenames for the first executable get an
+extra '.1' suffix, those for the second executable get '.2'.
+
+If an executable name is 'SKIP', the output files for that run are assumed
+to exist already and no program is executed. This can save some time when
+developing/testing a new program, to compare it multiple times to the same
+reference output.
+
+
+FAIL  compare.py serial vs omp

@@ -24,24 +24,24 @@ module load GCC/14.3.0
 echo ""
 
 
-g++ -O3 -DNDEBUG -std=c++17 -o kmeans main_startcode.cpp rng.cpp
+make serial
 
-./kmeans --input datasets/mouse_500x2.csv \
+./build/bin/kmeans_serial --input datasets/mouse_500x2.csv \
 		--output output/mouse_500x2_3.csv \
 		--repetitions 4   --k 3 \
 		--seed 2507953
 
-./kmeans --input datasets/simple1_5000x2.csv \
+./build/bin/kmeans_serial --input datasets/simple1_5000x2.csv \
 		--output output/simple1_5000x2_3.csv \
 		--repetitions 5   --k 3 \
 		--seed 2507953
 
-./kmeans --input datasets/simple1_5000x2.csv \
+./build/bin/kmeans_serial --input datasets/simple1_5000x2.csv \
 		--output output/simple1_5000x2_4.csv \
 		--repetitions 5   --k 4 \
 		--seed 2507953
 
-./kmeans --input datasets/simple1_5000x2.csv \
+./build/bin/kmeans_serial --input datasets/simple1_5000x2.csv \
 		--output output/simple1_5000x2_5.csv \
 		--repetitions 5   --k 5 \
 		--seed 2507953

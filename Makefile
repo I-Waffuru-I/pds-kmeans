@@ -5,10 +5,17 @@ INCLUDES := -Iinclude -Ilibs
 LDFLAGS :=
 EXTRAFLAGS :=
 
-# Directories and target executable
+# Directories
 SRC_DIRS := src libs
 BUILD_DIR := build
-TARGET := kmeans
+BIN_DIR := $(BUILD_DIR)/bin
+SERIAL_DIR := $(BUILD_DIR)/serial
+OMP_DIR := $(BUILD_DIR)/omp
+
+# Executable targets
+SERIAL_TARGET := $(BIN_DIR)/kmeans_serial
+OMP_TARGET := $(BIN_DIR)/kmeans_omp
+
 DATA := datasets
 OUTPUT := output
 
@@ -19,39 +26,65 @@ ARGS ?= --input $(DATA)/100000x5.csv \
 
 # Find all .cpp files in src/ and libs/
 SRCS := $(wildcard src/*.cpp libs/*.cpp)
-OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(notdir $(SRCS)))
-DEPS := $(OBJS:.o=.d)
+SERIAL_OBJS := $(patsubst %.cpp,$(SERIAL_DIR)/%.o,$(notdir $(SRCS)))
+OMP_OBJS := $(patsubst %.cpp,$(OMP_DIR)/%.o,$(notdir $(SRCS)))
+DEPS := $(SERIAL_OBJS:.o=.d) $(OMP_OBJS:.o=.d)
 
 # Tell Make where to search for .cpp files
 vpath %.cpp $(SRC_DIRS)
 
-# Default rule: build the executable
-all: $(TARGET)
+# Default rule: build both serial and OpenMP executables
+all: serial omp
 
-# Link object files to create the final executable
-$(TARGET): $(OBJS)
-	$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
+serial: $(SERIAL_TARGET)
 
-# Compile each .cpp file into build/*.o
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES)  -c $< -o $@
+omp: $(OMP_TARGET)
 
-# Create build directory if it does not exist
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+kmeans_serial: $(SERIAL_TARGET)
 
-# Enable OpenMP support
-omp: CXXFLAGS += -fopenmp -DHAVE_OMP
-omp: LDFLAGS += -fopenmp
-omp: $(TARGET)
+kmeans_omp: $(OMP_TARGET)
 
-# Custom rule to compile and run with arguments
-run: $(TARGET)
-	./$(TARGET) $(ARGS) $(EXTRAFLAGS)
+# Link serial executable
+$(SERIAL_TARGET): $(SERIAL_OBJS) | $(BIN_DIR)
+	$(CXX) $(SERIAL_OBJS) -o $@ $(LDFLAGS)
+
+# Link OpenMP executable
+$(OMP_TARGET): $(OMP_OBJS) | $(BIN_DIR)
+	$(CXX) $(OMP_OBJS) -o $@ $(LDFLAGS) -fopenmp
+
+# Compile serial objects
+$(SERIAL_DIR)/%.o: %.cpp | $(SERIAL_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Compile OpenMP objects
+$(OMP_DIR)/%.o: %.cpp | $(OMP_DIR)
+	$(CXX) $(CXXFLAGS) -fopenmp -DHAVE_OMP $(INCLUDES) -c $< -o $@
+
+# Create directories if they do not exist
+$(BIN_DIR) $(SERIAL_DIR) $(OMP_DIR):
+	mkdir -p $@
+
+# Run rules
+run: run-serial
+
+run-serial: $(SERIAL_TARGET)
+	./$(SERIAL_TARGET) $(ARGS) $(EXTRAFLAGS)
+
+run-omp: $(OMP_TARGET)
+	./$(OMP_TARGET) $(ARGS) $(EXTRAFLAGS)
 
 # Run with debug trace options
-debug: $(TARGET)
-	./$(TARGET) $(EXTRAFLAGS) --input $(DATA)/mouse_500x2.csv \
+debug: debug-omp
+
+debug-serial: $(SERIAL_TARGET)
+	./$(SERIAL_TARGET) $(EXTRAFLAGS) --input $(DATA)/mouse_500x2.csv \
+		--output $(OUTPUT)/output.csv \
+		--repetitions 10 --k 3 \
+		--centroidtrace $(OUTPUT)/centroidtrace.csv \
+		--trace $(OUTPUT)/clustertrace.csv --seed 1338
+
+debug-omp: $(OMP_TARGET)
+	./$(OMP_TARGET) $(EXTRAFLAGS) --input $(DATA)/mouse_500x2.csv \
 		--output $(OUTPUT)/output.csv \
 		--repetitions 10 --k 3 \
 		--centroidtrace $(OUTPUT)/centroidtrace.csv \
@@ -59,9 +92,9 @@ debug: $(TARGET)
 
 # Remove build artifacts
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) kmeans
 
 # Include automatically generated header dependency files
 -include $(DEPS)
 
-.PHONY: all omp run debug clean
+.PHONY: all serial omp kmeans_serial kmeans_omp run run-serial run-omp debug debug-serial debug-omp clean

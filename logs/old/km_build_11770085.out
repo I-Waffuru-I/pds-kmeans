@@ -1,0 +1,24 @@
+== build ==
+rm -rf build kmeans
+mkdir -p build/serial
+mkdir -p build/bin
+mkdir -p build/omp
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c src/centroids.cpp -o build/serial/centroids.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c src/helpers.cpp -o build/serial/helpers.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c src/kmeans.cpp -o build/serial/kmeans.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c src/main_startcode.cpp -o build/serial/main_startcode.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c src/naive.cpp -o build/serial/naive.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -Iinclude -Ilibs -c libs/rng.cpp -o build/serial/rng.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c src/centroids.cpp -o build/omp/centroids.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c src/helpers.cpp -o build/omp/helpers.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c src/kmeans.cpp -o build/omp/kmeans.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c src/main_startcode.cpp -o build/omp/main_startcode.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c src/naive.cpp -o build/omp/naive.o
+g++ -std=c++17 -Wall -Wextra -O3 -DNDEBUG -march=native -mtune=native -MMD -MP -fopenmp -DHAVE_OMP -Iinclude -Ilibs -c libs/rng.cpp -o build/omp/rng.o
+g++ build/serial/centroids.o build/serial/helpers.o build/serial/kmeans.o build/serial/main_startcode.o build/serial/naive.o build/serial/rng.o -o build/bin/kmeans_serial 
+g++ build/omp/centroids.o build/omp/helpers.o build/omp/kmeans.o build/omp/main_startcode.o build/omp/naive.o build/omp/rng.o -o build/bin/kmeans_omp  -fopenmp
+total 208
+-rwxr-x--- 1 vsc39345 vsc39345 101200 Nov  4 11:24 kmeans_omp
+-rwxr-x--- 1 vsc39345 vsc39345  99616 Nov  4 11:24 kmeans_serial
+OK: omp binary uses libgomp
+OK: serial binary has no OpenMP

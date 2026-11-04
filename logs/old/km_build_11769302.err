@@ -1,0 +1,243 @@
+src/kmeans.cpp:312: warning: ignoring ‘#pragma omp parallel’ [-Wunknown-pragmas]
+  312 | #pragma omp parallel for schedule(guided) if (mode == "omp-outer" || mode == "omp-nested")
+      | 
+src/kmeans.cpp:380: warning: ignoring ‘#pragma omp critical’ [-Wunknown-pragmas]
+  380 | #pragma omp critical
+      | 
+In file included from include/helpers.hpp:3,
+                 from src/helpers.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+In file included from include/centroids.hpp:3,
+                 from src/centroids.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/centroids.cpp: In function ‘void initCentroids(Rng&, std::vector<double>&, std::vector<double>&, DataSize&)’:
+src/centroids.cpp:18:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   18 |         for (int i = 0; i < ccount; i++)
+      |                         ~~^~~~~~~~
+src/centroids.cpp:21:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   21 |                 for (int e = 0; e < dsize.cols; e++)
+      |                                 ~~^~~~~~~~~~~~
+src/centroids.cpp: In function ‘void debugCentroids(std::vector<double>&, DataSize&)’:
+src/centroids.cpp:31:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<double>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   31 |         for (int r = 0; r < centroids.size() / size.cols; r++)
+      |                         ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/centroids.cpp:33:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   33 |                 for (int c = 0; c < size.cols; c++)
+      |                                 ~~^~~~~~~~~~~
+src/main_startcode.cpp: In function ‘int mainCxx(const std::vector<std::__cxx11::basic_string<char> >&)’:
+src/main_startcode.cpp:152:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::__cxx11::basic_string<char> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  152 |         for (int i = 0; i < args.size(); i += 2)
+      |                         ~~^~~~~~~~~~~~~
+src/centroids.cpp: In function ‘void debugCentroidPoints(std::vector<int>&)’:
+src/centroids.cpp:44:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   44 |         for (int r = 0; r < pCentroid.size(); r++)
+      |                         ~~^~~~~~~~~~~~~~~~~~
+In file included from include/centroids.hpp:3,
+                 from src/kmeans.cpp:3:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/kmeans.cpp: In function ‘int kmeansSerial(Rng&, const string&, const string&, int, int, int, int, const string&, const string&, const string&)’:
+src/kmeans.cpp:47:31: warning: catching polymorphic type ‘class std::exception’ by value [-Wcatch-value=]
+   47 |         catch (std::exception e)
+      |                               ^
+src/kmeans.cpp: In function ‘int kmeansOMP(Rng&, const string&, const string&, int, int, int, int, const string&, const string&, const string&)’:
+src/kmeans.cpp:236:31: warning: catching polymorphic type ‘class std::exception’ by value [-Wcatch-value=]
+  236 |         catch (std::exception e)
+      |                               ^
+src/naive.cpp:155: warning: ignoring ‘#pragma omp parallel’ [-Wunknown-pragmas]
+  155 | #pragma omp parallel reduction(+ : avgDist) reduction(|| : changed)
+      | 
+src/naive.cpp:161: warning: ignoring ‘#pragma omp for’ [-Wunknown-pragmas]
+  161 | #pragma omp for nowait
+      | 
+src/naive.cpp:244: warning: ignoring ‘#pragma omp critical’ [-Wunknown-pragmas]
+  244 | #pragma omp critical
+      | 
+src/naive.cpp:309: warning: ignoring ‘#pragma omp parallel’ [-Wunknown-pragmas]
+  309 | #pragma omp parallel for schedule(guided) reduction(+ : avgDist) reduction(|| : changed)
+      | 
+src/naive.cpp:366: warning: ignoring ‘#pragma omp critical’ [-Wunknown-pragmas]
+  366 | #pragma omp critical
+      | 
+In file included from include/naive.hpp:2,
+                 from src/naive.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/naive.cpp: In function ‘void naiveClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&)’:
+src/naive.cpp:44:40: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+   44 |                 for (size_t cI = 0; cI < centroidNumber; ++cI)
+      |                                     ~~~^~~~~~~~~~~~~~~~
+src/naive.cpp:94:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   94 |                 for (int c = 0; c < size.cols; c++)
+      |                                 ~~^~~~~~~~~~~
+src/naive.cpp:112:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  112 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp: In function ‘void naiveOMPClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&, int)’:
+src/naive.cpp:248:51: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  248 |                                 for (int c = 0; c < size.cols + 1; c++)
+      |                                                 ~~^~~~~~~~~~~~~~~
+src/naive.cpp:263:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  263 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp:136:29: warning: unused parameter ‘numThreads’ [-Wunused-parameter]
+  136 |                         int numThreads)
+      |                         ~~~~^~~~~~~~~~
+src/naive.cpp: In function ‘void naiveBaseOMPClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&, int)’:
+src/naive.cpp:317:40: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  317 |                 for (size_t cI = 0; cI < centroidNumber; ++cI)
+      |                                     ~~~^~~~~~~~~~~~~~~~
+src/naive.cpp:368:43: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  368 |                         for (int c = 0; c < size.cols; c++)
+      |                                         ~~^~~~~~~~~~~
+src/naive.cpp:387:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  387 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp:290:81: warning: unused parameter ‘numThreads’ [-Wunused-parameter]
+  290 |                             double &avgDist, DataSize &size, bool &changed, int numThreads)
+      |                                                                             ~~~~^~~~~~~~~~
+In file included from include/centroids.hpp:3,
+                 from src/centroids.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/centroids.cpp: In function ‘void initCentroids(Rng&, std::vector<double>&, std::vector<double>&, DataSize&)’:
+src/centroids.cpp:18:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   18 |         for (int i = 0; i < ccount; i++)
+      |                         ~~^~~~~~~~
+src/centroids.cpp:21:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   21 |                 for (int e = 0; e < dsize.cols; e++)
+      |                                 ~~^~~~~~~~~~~~
+src/centroids.cpp: In function ‘void debugCentroids(std::vector<double>&, DataSize&)’:
+src/centroids.cpp:31:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<double>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   31 |         for (int r = 0; r < centroids.size() / size.cols; r++)
+      |                         ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/centroids.cpp:33:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   33 |                 for (int c = 0; c < size.cols; c++)
+      |                                 ~~^~~~~~~~~~~
+src/centroids.cpp: In function ‘void debugCentroidPoints(std::vector<int>&)’:
+src/centroids.cpp:44:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   44 |         for (int r = 0; r < pCentroid.size(); r++)
+      |                         ~~^~~~~~~~~~~~~~~~~~
+In file included from include/helpers.hpp:3,
+                 from src/helpers.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+In file included from include/centroids.hpp:3,
+                 from src/kmeans.cpp:3:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/main_startcode.cpp: In function ‘int mainCxx(const std::vector<std::__cxx11::basic_string<char> >&)’:
+src/main_startcode.cpp:152:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::__cxx11::basic_string<char> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  152 |         for (int i = 0; i < args.size(); i += 2)
+      |                         ~~^~~~~~~~~~~~~
+src/kmeans.cpp: In function ‘int kmeansSerial(Rng&, const string&, const string&, int, int, int, int, const string&, const string&, const string&)’:
+src/kmeans.cpp:47:31: warning: catching polymorphic type ‘class std::exception’ by value [-Wcatch-value=]
+   47 |         catch (std::exception e)
+      |                               ^
+src/kmeans.cpp: In function ‘int kmeansOMP(Rng&, const string&, const string&, int, int, int, int, const string&, const string&, const string&)’:
+src/kmeans.cpp:236:31: warning: catching polymorphic type ‘class std::exception’ by value [-Wcatch-value=]
+  236 |         catch (std::exception e)
+      |                               ^
+In file included from include/naive.hpp:2,
+                 from src/naive.cpp:1:
+include/util.hpp: In constructor ‘DataSize::DataSize(size_t, size_t)’:
+include/util.hpp:6:10: warning: ‘DataSize::rows’ will be initialized after [-Wreorder]
+    6 |   size_t rows;
+      |          ^~~~
+include/util.hpp:5:10: warning:   ‘size_t DataSize::cols’ [-Wreorder]
+    5 |   size_t cols;
+      |          ^~~~
+include/util.hpp:7:3: warning:   when initialized here [-Wreorder]
+    7 |   DataSize(size_t r, size_t c) : rows(r), cols(c) {}
+      |   ^~~~~~~~
+src/naive.cpp: In function ‘void naiveClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&)’:
+src/naive.cpp:44:40: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+   44 |                 for (size_t cI = 0; cI < centroidNumber; ++cI)
+      |                                     ~~~^~~~~~~~~~~~~~~~
+src/naive.cpp:94:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   94 |                 for (int c = 0; c < size.cols; c++)
+      |                                 ~~^~~~~~~~~~~
+src/naive.cpp:112:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  112 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp: In function ‘void naiveOMPClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&, int)’:
+src/naive.cpp:248:51: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  248 |                                 for (int c = 0; c < size.cols + 1; c++)
+      |                                                 ~~^~~~~~~~~~~~~~~
+src/naive.cpp:263:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  263 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp:136:29: warning: unused parameter ‘numThreads’ [-Wunused-parameter]
+  136 |                         int numThreads)
+      |                         ~~~~^~~~~~~~~~
+src/naive.cpp: In function ‘void naiveBaseOMPClustering(std::vector<double>&, std::vector<double>&, std::vector<int>&, double&, DataSize&, bool&, int)’:
+src/naive.cpp:317:40: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  317 |                 for (size_t cI = 0; cI < centroidNumber; ++cI)
+      |                                     ~~~^~~~~~~~~~~~~~~~
+src/naive.cpp:368:43: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  368 |                         for (int c = 0; c < size.cols; c++)
+      |                                         ~~^~~~~~~~~~~
+src/naive.cpp:387:30: warning: comparison of integer expressions of different signedness: ‘size_t’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  387 |         for (size_t i = 0; i < centroidNumber; i++)
+      |                            ~~^~~~~~~~~~~~~~~~
+src/naive.cpp:290:81: warning: unused parameter ‘numThreads’ [-Wunused-parameter]
+  290 |                             double &avgDist, DataSize &size, bool &changed, int numThreads)
+      |                                                                             ~~~~^~~~~~~~~~
