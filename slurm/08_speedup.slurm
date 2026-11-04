@@ -17,10 +17,10 @@ source slurm/common.sh
 need_bins "$BIN_SERIAL" "$BIN_OMP"; ensure_datasets
 init_csv speedup
 
-run_timed speedup "$BIN_SERIAL" 1 serial
-run_timed speedup "$BIN_SERIAL" 1 serial-naive
-# OpenMP-compiled binary on one thread: pure overhead compared with the serial build
-for mode in omp-naive omp; do run_timed speedup "$BIN_OMP" 1 "$mode"; done
-# And the OpenMP binary at full thread count: speedup
-for mode in omp-naive omp; do run_timed speedup "$BIN_OMP" "$MAX_THREADS" "$mode"; done
+
+for run in $(seq 1 10); do
+	run_timed speedup "$BIN_SERIAL" 1 serial
+	# speedup at max threads
+	for mode in omp-naive omp; do run_timed speedup "$BIN_OMP" "$MAX_THREADS" "$mode"; done
+done
 echo "Results in $CSV"

@@ -14,7 +14,7 @@ resultaat:
 # Onze applicatie:
 
 ```
-./kmeans \
+/kmeans \
 		--input datasets/mouse_500x2.csv \
 		--output output/.csv \
 		--centroidtrace output/mouse-centroidrace.csv \

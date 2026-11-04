@@ -55,7 +55,7 @@ debug submode="serial" num_threads="1": build
         --mode "{{submode}}" --threads "{{num_threads}}"
 
 # Compare two modes (e.g. `just compare-modes serial-naive omp-naive 4`)
-compare-modes mode1="serial" mode2="omp-naive" num_threads=threads: build
+compare-modes mode1="serial-naive" mode2="omp-naive" num_threads=threads: build
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p output

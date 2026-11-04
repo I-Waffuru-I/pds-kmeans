@@ -1,7 +1,7 @@
-mode,threads,seconds
-omp,1,84.73585
-omp,12,10.7823
-omp-naive,1,2.059735
-omp-naive,12,6.99606
-serial,1,4.20612
-serial-naive,1,2.219375
+mode,threads,run,seconds
+serial,1,1,4.5385
+serial,1,2,4.49254
+serial,1,3,4.50615
+omp,8,1,1.33447
+omp,8,2,1.33037
+omp,8,3,1.33056
