@@ -185,10 +185,10 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 	// Some example output, of course you can log your timing data anyway you
 	// like.
 	std::cerr << "# "
-	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "Type,Submode,blocks,threads,file,seed,clusters,repetitions,"
 	             "bestdistsquared,timeinseconds"
 	          << std::endl;
-	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	std::cout << "sequential," << mode << "," << numBlocks << "," << numThreads << ","
 	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
 	          << "," << repetitions << "," << bestDistSquaredSum << ","
 	          << timer.durationNanoSeconds() / 1e9 << std::endl;
@@ -295,6 +295,7 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 
 #ifdef HAVE_OMP
 	omp_set_num_threads(numThreads);
+	// omp_set_max_active_levels(2);
 #endif
 	// omp_set_max_active_levels(2);
 
@@ -309,102 +310,207 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		initCentroids(rng, centroids[i], allData, size);
 	}
 
-#pragma omp parallel for schedule(guided) if (mode == "omp-outer" || mode == "omp-nested")
-	for (int r = 0; r < repetitions; r++)
+	bool outer = mode == "omp-outeronly" || mode == "omp-nested";
+	// int outer = 0;
+
+	if (outer)
 	{
-		size_t numSteps = 0;
-
-		// debugCentroids(centroids, size);
-		// TODO: Vervangen door een Vector
-		// centroidDebugFile.write(centroids, size.cols);
-		centroidsDebug[r].push_back(centroids[r]);
-
-		AutoAverageTimer timer2("time naïve clustering");
-		timer2.start();
-
-		bool changed = true;
-		double avgDist = 0;
-		do
+#pragma omp parallel for schedule(guided)
+		for (int r = 0; r < repetitions; r++)
 		{
+			size_t numSteps = 0;
 
-			avgDist = 0;
-			// debugCentroidPoints(pointsCentroid);
-
-			// oldCentroids = centroids;
-
-			// std::cout << "Before" << std::endl;
 			// debugCentroids(centroids, size);
-			if (mode == "omp-outeronly")
-			{
-				// Route to omp-outeronly implementation when added
-				naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                size, changed);
-			}
-			else if (mode == "omp-naive")
-			{
-				naiveBaseOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                       size, changed, 0);
-			}
-			else
-			{
-				// Default OMP mode: "omp" or "omp-naive"
-				naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                   size, changed, 0);
-			}
+			// TODO: Vervangen door een Vector
+			// centroidDebugFile.write(centroids, size.cols);
+			centroidsDebug[r].push_back(centroids[r]);
 
-			// Write all centroids to file:
-			// Even disablen want dit zou raceconditions veroorzaken
-			if (changed)
+			// AutoAverageTimer timer2("time naïve clustering");
+			// timer2.start();
+
+			bool changed = true;
+			double avgDist = 0;
+			do
 			{
 
-				centroidsDebug[r].push_back(centroids[r]);
-				// centroidDebugFile.write(centroids, size.cols);
-			}
-			// Om een of andere reden moet dit er wel uit blijven en nog een keer
-			// geschreven worden
-			// Even disablen want dit zou racecondigtions veroorzaken.
-			// TODO: Vervangen door een array met wat te schrijven?
-			// clustersDebugFile.write(pointsCentroid, size.rows);
-			clustersDebug[r].push_back(pointsCentroid[r]);
+				avgDist = 0;
+				// debugCentroidPoints(pointsCentroid);
 
-			numSteps++;
-		} while (changed);
+				// oldCentroids = centroids;
 
-		// std::cout << "Loop completed" << std::endl;
-		// std::cout << "Best dist: " << bestDistSquaredSum
-		//           << " | avgDist: " << avgDist << std::endl;
-		// Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
-		// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
-		// niet overeenkwam.
+				// std::cout << "Before" << std::endl;
+				// debugCentroids(centroids, size);
+				if (mode == "omp-outeronly")
+				{
+					// Route to omp-outeronly implementation when added
+					naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                size, changed);
+				}
+				else if (mode == "omp-naive")
+				{
+					naiveBaseOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                       size, changed, 0);
+				}
+				else
+				{
+					// Default OMP mode: "omp" or "omp-naive"
+					naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                   size, changed, 0);
+				}
+
+				// Write all centroids to file:
+				// Even disablen want dit zou raceconditions veroorzaken
+				if (changed)
+				{
+
+					centroidsDebug[r].push_back(centroids[r]);
+					// centroidDebugFile.write(centroids, size.cols);
+				}
+				// Om een of andere reden moet dit er wel uit blijven en nog een keer
+				// geschreven worden
+				// Even disablen want dit zou racecondigtions veroorzaken.
+				// TODO: Vervangen door een array met wat te schrijven?
+				// clustersDebugFile.write(pointsCentroid, size.rows);
+				clustersDebug[r].push_back(pointsCentroid[r]);
+
+				numSteps++;
+			} while (changed);
+
+			// std::cout << "Loop completed" << std::endl;
+			// std::cout << "Best dist: " << bestDistSquaredSum
+			//           << " | avgDist: " << avgDist << std::endl;
+			// Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
+			// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
+			// niet overeenkwam.
 
 #pragma omp critical
 
-		{
-			if (avgDist < bestDistSquaredSum)
 			{
-				// std::cout << "Chose repetition: " << r << std::endl;
+				if (avgDist < bestDistSquaredSum)
+				{
+					// std::cout << "Chose repetition: " << r << std::endl;
 
-				bestDistSquaredSum = avgDist;
+					bestDistSquaredSum = avgDist;
 
-				bestCluster = pointsCentroid[r];
+					bestCluster = pointsCentroid[r];
+				}
 			}
+
+			// timer.stop();
+
+			// This shouldn't create race conditions as it accesses a different spot of
+			// the vector for a repetition
+			stepsPerRepetition[r] = numSteps;
+
+			// bool changed = true;
+			// while (changed) {
+			//
+			//
+			//
+			// }
+
+			// timer2.stop();
 		}
-
-		// timer.stop();
-
-		// This shouldn't create race conditions as it accesses a different spot of
-		// the vector for a repetition
-		stepsPerRepetition[r] = numSteps;
-
-		// bool changed = true;
-		// while (changed) {
-		//
-		//
-		//
-		// }
-
-		timer2.stop();
 	}
+	else
+	{
+		for (int r = 0; r < repetitions; r++)
+		{
+			size_t numSteps = 0;
+
+			// debugCentroids(centroids, size);
+			// TODO: Vervangen door een Vector
+			// centroidDebugFile.write(centroids, size.cols);
+			centroidsDebug[r].push_back(centroids[r]);
+
+			// AutoAverageTimer timer2("time naïve clustering");
+			// timer2.start();
+
+			bool changed = true;
+			double avgDist = 0;
+			do
+			{
+
+				avgDist = 0;
+				// debugCentroidPoints(pointsCentroid);
+
+				// oldCentroids = centroids;
+
+				// std::cout << "Before" << std::endl;
+				// debugCentroids(centroids, size);
+				if (mode == "omp-outeronly")
+				{
+					// Route to omp-outeronly implementation when added
+					naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                size, changed);
+				}
+				else if (mode == "omp-naive")
+				{
+					naiveBaseOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                       size, changed, 0);
+				}
+				else
+				{
+					// Default OMP mode: "omp" or "omp-naive"
+					naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
+					                   size, changed, 0);
+				}
+
+				// Write all centroids to file:
+				// Even disablen want dit zou raceconditions veroorzaken
+				if (changed)
+				{
+
+					centroidsDebug[r].push_back(centroids[r]);
+					// centroidDebugFile.write(centroids, size.cols);
+				}
+				// Om een of andere reden moet dit er wel uit blijven en nog een keer
+				// geschreven worden
+				// Even disablen want dit zou racecondigtions veroorzaken.
+				// TODO: Vervangen door een array met wat te schrijven?
+				// clustersDebugFile.write(pointsCentroid, size.rows);
+				clustersDebug[r].push_back(pointsCentroid[r]);
+
+				numSteps++;
+			} while (changed);
+
+			// std::cout << "Loop completed" << std::endl;
+			// std::cout << "Best dist: " << bestDistSquaredSum
+			//           << " | avgDist: " << avgDist << std::endl;
+			// Deze stond eerst in de  binnenste loop waardoor ook nog eens werd
+			// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
+			// niet overeenkwam.
+
+#pragma omp critical
+
+			{
+				if (avgDist < bestDistSquaredSum)
+				{
+					// std::cout << "Chose repetition: " << r << std::endl;
+
+					bestDistSquaredSum = avgDist;
+
+					bestCluster = pointsCentroid[r];
+				}
+			}
+
+			// timer.stop();
+
+			// This shouldn't create race conditions as it accesses a different spot of
+			// the vector for a repetition
+			stepsPerRepetition[r] = numSteps;
+
+			// bool changed = true;
+			// while (changed) {
+			//
+			//
+			//
+			// }
+
+			// timer2.stop();
+		}
+	}
+
 	timer.stop();
 
 	// Hier moeten we ook nog even alles uit de nieuwe vectors halen en schrijven
@@ -431,10 +537,10 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 	// Some example output, of course you can log your timing data anyway you
 	// like.
 	std::cerr << "# "
-	             "Type,blocks,threads,file,seed,clusters,repetitions,"
+	             "Type,Submode,blocks,threads,file,seed,clusters,repetitions,"
 	             "bestdistsquared,timeinseconds"
 	          << std::endl;
-	std::cout << "sequential," << numBlocks << "," << numThreads << ","
+	std::cout << "parallel," << mode << "," << numBlocks << "," << numThreads << ","
 	          << inputFile << "," << rng.getUsedSeed() << "," << numClusters
 	          << "," << repetitions << "," << bestDistSquaredSum << ","
 	          << timer.durationNanoSeconds() / 1e9 << std::endl;
