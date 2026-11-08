@@ -1,10 +1,11 @@
 # Default variables (can be overridden on the CLI, e.g. `just threads=8 run-omp`)
-dataset := "datasets/100000x5.csv"
+# dataset := "datasets/100000x5.csv"
+dataset := "datasets/1M_1000000x4.csv"
 output  := "output/output.csv"
-k       := "10"
-reps    := "20"
+k       := "5"
+reps    := "10"
 seed    := "1337"
-threads := "4"
+threads := "16"
 mode    := "omp-naive"
 
 # List all available recipes
