@@ -196,9 +196,9 @@ void naiveOMPClustering(std::vector<double> &centroids,
 				}
 			}
 
-#ifdef HAVE_OMP
-			partTime = omp_get_wtime();
-#endif
+			// #ifdef HAVE_OMP
+			// partTime = omp_get_wtime();
+			// #endif
 			// Som van squareddist
 			avgDist += minDist;
 
@@ -226,11 +226,11 @@ void naiveOMPClustering(std::vector<double> &centroids,
 			}
 			localCentroidMap[cIndex][size.cols] += 1;
 
-#ifdef HAVE_OMP
-			partTime = omp_get_wtime() - partTime;
-#else
-			(void)partTime;
-#endif
+			// #ifdef HAVE_OMP
+			// 			partTime = omp_get_wtime() - partTime;
+			// #else
+			// (void)partTime;
+			// #endif
 
 			// #pragma omp atomic
 			// totalTime += partTime;
