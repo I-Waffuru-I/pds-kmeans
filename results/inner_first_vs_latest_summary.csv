@@ -1,0 +1,9 @@
+mode,threads,seconds
+inner_first_vs_latest:omp,12,4.08309
+inner_first_vs_latest:omp-naive,12,2.26256
+inner_k10:omp,12,3.78159
+inner_k10:omp-naive,12,2.22273
+inner_k2:omp,12,1.25022
+inner_k2:omp-naive,12,0.60583
+inner_k50:omp,12,18.1167
+inner_k50:omp-naive,12,11.6222
