@@ -103,8 +103,8 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 		// debugCentroids(centroids, size);
 		centroidDebugFile.write(centroids, size.cols);
 
-		AutoAverageTimer timer2("time naïve clustering");
-		timer2.start();
+		// AutoAverageTimer timer2("time naïve clustering");
+		// timer2.start();
 		bool changed = true;
 
 		double avgDist = 0;
@@ -178,7 +178,7 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 		centroidDebugFile.close();
 		clustersDebugFile.close();
 
-		timer2.stop();
+		// timer2.stop();
 	}
 	timer.stop();
 

@@ -2,9 +2,9 @@
 #SBATCH --job-name=km_speedup
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --time=00:20:00
+#SBATCH --time=00:40:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=64
 #SBATCH --mem=8G
 #SBATCH --exclusive
 # Notebook: "Seriel vs OMP implementaties", "Speedup berekenen",
@@ -14,9 +14,9 @@
 
 source slurm/common.sh
 
-need_bins "$BIN_SERIAL" "$BIN_OMP"; ensure_datasets
+need_bins "$BIN_SERIAL" "$BIN_OMP"
+ensure_datasets
 init_csv speedup
-
 
 for run in $(seq 1 10); do
 	run_timed speedup "$BIN_SERIAL" 1 serial
