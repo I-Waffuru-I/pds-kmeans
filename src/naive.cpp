@@ -90,8 +90,8 @@ void naiveClustering(std::vector<double> &centroids,
 			// std::cout << "Changed point" << std::endl;
 		}
 
-		centroidMap[cIndex].resize(size.cols + 1);
-		for (int c = 0; c < size.cols; c++)
+		// centroidMap[cIndex].resize(size.cols + 1);
+		for (size_t c = 0; c < size.cols; c++)
 		{
 			// std::cout << allData[c+i] << " , ";
 			centroidMap[cIndex][c] += allData[i * size.cols + c];
@@ -245,7 +245,7 @@ void naiveOMPClustering(std::vector<double> &centroids,
 		{
 			for (int r = 0; r < centroidNumber; r++)
 			{
-				for (int c = 0; c < size.cols + 1; c++)
+				for (size_t c = 0; c < size.cols + 1; c++)
 				{
 					centroidMap[r][c] += localCentroidMap[r][c];
 				}

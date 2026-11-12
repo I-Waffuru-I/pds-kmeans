@@ -21,10 +21,19 @@ CUDA_TARGET := $(BIN_DIR)/kmeans_cuda
 DATA := datasets
 OUTPUT := output
 
-ARGS ?= --input $(DATA)/100000x5.csv \
+THREADS ?= 1
+
+ARGS ?= --input $(DATA)/1Mx4.csv \
 	--output $(OUTPUT)/output.csv \
-	--repetitions 20 --k 10 \
+	--repetitions 1 --k 5 \
+	--threads $(THREADS) \
 	--seed 1337
+
+# ARGS ?= --input $(DATA)/3M_3000000x6.csv \
+# 	--output $(OUTPUT)/output.csv \
+# 	--repetitions 3 --k 12 \
+# 	--threads $(THREADS) \
+# 	--seed 1337
 
 # Shared object files (compiled from src/ and libs/)
 COMMON_OBJS := kmeans.o naive.o centroids.o helpers.o rng.o

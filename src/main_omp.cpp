@@ -122,8 +122,7 @@ int mainCxx(const std::vector<std::string> &args)
 		usage();
 
 	std::string inputFileName, outputFileName, centroidTraceFileName,
-	    clusterTraceFileName;
-	std::string mode = "serial";
+	    clusterTraceFileName, mode;
 	unsigned long seed = 54030599202;
 
 	int numClusters = -1, repetitions = -1;

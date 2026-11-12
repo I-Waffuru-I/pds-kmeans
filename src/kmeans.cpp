@@ -129,6 +129,8 @@ int kmeansSerial(Rng &rng, const std::string &inputFile,
 				                changed);
 			}
 
+			// std::cout << "Done  rep" << std::endl;
+
 			// std::cout << "After" << std::endl;
 			// debugCentroids(centroids, size);
 
@@ -310,7 +312,6 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		initCentroids(rng, centroids[i], allData, size);
 	}
 
-	bool outer = mode == "omp-outeronly" || mode == "omp-nested";
 	// int outer = 0;
 
 	for (int r = 0; r < repetitions; r++)
@@ -318,9 +319,9 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		size_t numSteps = 0;
 
 		// debugCentroids(centroids, size);
-		// TODO: Vervangen door een Vector
-		// centroidDebugFile.write(centroids, size.cols);
-		centroidsDebug[r].push_back(centroids[r]);
+		// centroidDebugFile.write(centroids[r], size.cols);
+		if (centroidDebugFile.is_open())
+			centroidsDebug[r].push_back(centroids[r]);
 
 		// AutoAverageTimer timer2("time naïve clustering");
 		// timer2.start();
@@ -360,15 +361,17 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 			if (changed)
 			{
 
-				centroidsDebug[r].push_back(centroids[r]);
-				// centroidDebugFile.write(centroids, size.cols);
+				if (centroidDebugFile.is_open())
+					centroidsDebug[r].push_back(centroids[r]);
+				// centroidDebugFile.write(centroids[r], size.cols);
 			}
 			// Om een of andere reden moet dit er wel uit blijven en nog een keer
 			// geschreven worden
 			// Even disablen want dit zou racecondigtions veroorzaken.
 			// TODO: Vervangen door een array met wat te schrijven?
-			// clustersDebugFile.write(pointsCentroid, size.rows);
-			clustersDebug[r].push_back(pointsCentroid[r]);
+			// clustersDebugFile.write(pointsCentroid[r], size.rows);
+			if (clustersDebugFile.is_open())
+				clustersDebug[r].push_back(pointsCentroid[r]);
 
 			numSteps++;
 		} while (changed);
@@ -380,17 +383,13 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		// gekeken naar aparte iteraties in de iteraties en het eindresultaat dus
 		// niet overeenkwam.
 
-#pragma omp critical
-
+		if (avgDist < bestDistSquaredSum)
 		{
-			if (avgDist < bestDistSquaredSum)
-			{
-				// std::cout << "Chose repetition: " << r << std::endl;
+			// std::cout << "Chose repetition: " << r << std::endl;
 
-				bestDistSquaredSum = avgDist;
+			bestDistSquaredSum = avgDist;
 
-				bestCluster = pointsCentroid[r];
-			}
+			bestCluster = pointsCentroid[r];
 		}
 
 		// timer.stop();
