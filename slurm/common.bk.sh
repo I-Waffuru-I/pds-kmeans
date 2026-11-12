@@ -16,11 +16,11 @@ RUNS="${RUNS:-3}"                       # repeats per configuration for timing
 THREAD_LIST="${THREAD_LIST:-1 2 4 8 16}"
 MAX_THREADS="${MAX_THREADS:-${SLURM_CPUS_PER_TASK:-16}}"
 
-BIN_SERIAL="$ROOT/build/bin/kmeans_serial"    # built WITHOUT -fopenmp
-BIN_OMP="$ROOT/build/bin/kmeans_omp"          # built WITH -fopenmp -DHAVE_OMP
+BIN_SERIAL="$ROOT/bin/kmeans_serial"    # built WITHOUT -fopenmp
+BIN_OMP="$ROOT/bin/kmeans_omp"          # built WITH -fopenmp -DHAVE_OMP
 RESULTS="$ROOT/results"
 OUT="$ROOT/output"
-mkdir -p "$RESULTS" "$OUT" "$ROOT/logs" "$ROOT/build/bin"
+mkdir -p "$RESULTS" "$OUT" "$ROOT/logs" "$ROOT/bin"
 
 # Environment for reproducible OpenMP behaviour
 export OMP_PROC_BIND="${OMP_PROC_BIND:-close}"
