@@ -3,9 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#ifdef HAVE_OMP
-#include <omp.h>
-#endif
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -105,36 +103,15 @@ int kmeans(Rng &rng, const std::string &inputFile,
            int numBlocks, int numThreads,
            const std::string &centroidDebugFileName,
            const std::string &clusterDebugFileName,
-           const std::string &mode)
+           std::string &mode)
 {
-	if (mode.find("omp") != std::string::npos)
+	if (mode.empty())
 	{
-		return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions,
-		                 numBlocks, numThreads, centroidDebugFileName,
-		                 clusterDebugFileName, mode);
+		mode = "serial";
 	}
-	else if (mode.find("serial") != std::string::npos)
-	{
-		return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions,
-		                    numBlocks, numThreads, centroidDebugFileName,
-		                    clusterDebugFileName, mode);
-	}
-	else if (mode.find("mpi") != std::string::npos)
-	{
-		std::cerr << "MPI mode ('" << mode << "') is not implemented yet." << std::endl;
-		return -1;
-	}
-	else if (mode.find("cuda") != std::string::npos)
-	{
-		std::cerr << "CUDA mode ('" << mode << "') is not implemented yet." << std::endl;
-		return -1;
-	}
-	else
-	{
-		std::cerr << "Unknown mode '" << mode << "'" << std::endl;
-		usage();
-		return -1;
-	}
+	return kmeansSerial(rng, inputFile, outputFileName, numClusters, repetitions,
+	                    numBlocks, numThreads, centroidDebugFileName,
+	                    clusterDebugFileName, mode);
 }
 
 int mainCxx(const std::vector<std::string> &args)
