@@ -9,8 +9,8 @@ void naiveClustering(std::vector<double> &centroids,
 
 // Omp algorithm version of kmeans
 void naiveOMPClustering(std::vector<double> &centroids,
-                        std::vector<double> &allData, std::vector<int> &cPoints,
-                        double &avgDist, DataSize &size, bool &changed, int numThreads);
+                        std::vector<double> &allData, std::vector<int> &cPoints, std::vector<double> &localCentroidMap,
+                        double &avgDist, DataSize &size, bool &changed);
 
 void naiveBaseOMPClustering(std::vector<double> &centroids,
                             std::vector<double> &allData, std::vector<int> &cPoints,
