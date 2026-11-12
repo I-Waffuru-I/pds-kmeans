@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Speedup / efficiency / Amdahl analysis of results/*.csv written by the .slurm tests."""
-import sys, os, glob
+import sys, os, glob, csv
 import pandas as pd
 
 res = sys.argv[1] if len(sys.argv) > 1 else "results"
@@ -9,9 +9,41 @@ try:
 except ImportError:
     plt = None
 
+def load_csv(path):
+    rows = []
+    with open(path, newline="") as fh:
+        for r in csv.reader(fh):
+            if not r or r[0].startswith("#") or r[0] in ("label", "Type"):
+                continue
+            if len(r) == 8:    # label,mode,threads,run,reps,bestdist,seconds,steps
+                label, mode, threads, run, _, bestdist, seconds, steps = r
+            elif len(r) == 7:  # label,mode,threads,run,bestdist,seconds,steps
+                label, mode, threads, run, bestdist, seconds, steps = r
+            elif len(r) == 6:  # label,threads,run,bestdist,seconds,steps (mode omitted)
+                label, threads, run, bestdist, seconds, steps = r
+                mode = label
+            elif len(r) == 10: # raw kmeans stdout with submode
+                label, mode, _, threads, _, _, _, _, bestdist, seconds = r
+                run, steps = 1, ""
+            elif len(r) == 9:  # raw kmeans stdout without submode
+                label, _, threads, _, _, _, _, bestdist, seconds = r
+                mode, run, steps = label, 1, ""
+            else:
+                continue
+            rows.append({
+                "label": label,
+                "mode": mode or label,
+                "threads": int(threads),
+                "run": int(run),
+                "bestdist": float(bestdist),
+                "seconds": float(seconds),
+                "steps": steps,
+            })
+    return pd.DataFrame(rows)
+
 def mean_times(df):
-    if df["label"].nunique() > 1:
-        df = df.assign(mode=df["label"] + ":" + df["mode"])
+    if "label" in df.columns and df["label"].nunique() > 1:
+        df = df.assign(mode=df["label"].astype(str) + ":" + df["mode"].astype(str))
     return df.groupby(["mode", "threads"], as_index=False)["seconds"].mean()
 
 def amdahl_fit(t, speedup, p_candidates=None):
@@ -21,9 +53,15 @@ def amdahl_fit(t, speedup, p_candidates=None):
 
 f = os.path.join(res, "thread_scaling.csv")
 if os.path.exists(f):
-    df = pd.read_csv(f); m = mean_times(df)
-    base = m[m["mode"] == "serial"]["seconds"].iloc[0]
-    m = m[m["mode"] != "serial"].copy()
+    df = load_csv(f); m = mean_times(df)
+    serial_rows = m[m["mode"] == "serial"]
+    if not serial_rows.empty:
+        base = serial_rows["seconds"].iloc[0]
+        m = m[m["mode"] != "serial"].copy()
+    else:
+        t1 = m[m["threads"] == 1]["seconds"]
+        base = t1.iloc[0] if not t1.empty else m["seconds"].iloc[0]
+        m = m.copy()
     m["speedup"] = base / m["seconds"]
     m["efficiency"] = m["speedup"] / m["threads"]
     # Amdahl: use the max-thread run of each mode to estimate parallel fraction p
@@ -53,7 +91,7 @@ if os.path.exists(f):
 for name in ["serial_vs_omp", "parallel_levels", "inner_first_vs_latest"]:
     f = os.path.join(res, name + ".csv")
     if os.path.exists(f):
-        df = pd.read_csv(f); m = mean_times(df)
+        df = load_csv(f); m = mean_times(df)
         print(f"\n== {name} ==\n{m.to_string(index=False)}")
         m.to_csv(os.path.join(res, name + "_summary.csv"), index=False)
         if plt and name == "parallel_levels":

@@ -2,7 +2,7 @@
 #SBATCH --job-name=km_serial_vs_omp
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --time=00:20:00
+#SBATCH --time=00:40:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=8G
@@ -13,7 +13,8 @@
 #source /data/leuven/303/vsc30380/slurmhooks
 source slurm/common.sh
 
-need_bins "$BIN_SERIAL" "$BIN_OMP"; ensure_datasets
+need_bins "$BIN_SERIAL" "$BIN_OMP"
+ensure_datasets
 init_csv serial_vs_omp
 
 run_timed serial_vs_omp "$BIN_SERIAL" 1 serial
