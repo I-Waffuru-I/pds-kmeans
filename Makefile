@@ -25,7 +25,7 @@ THREADS ?= 1
 
 ARGS ?= --input $(DATA)/1Mx4.csv \
 	--output $(OUTPUT)/output.csv \
-	--repetitions 1 --k 5 \
+	--repetitions 1 --k 100 \
 	--threads $(THREADS) \
 	--seed 1337
 
