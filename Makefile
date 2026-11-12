@@ -11,10 +11,12 @@ BUILD_DIR := build
 BIN_DIR := $(BUILD_DIR)/bin
 SERIAL_DIR := $(BUILD_DIR)/serial
 OMP_DIR := $(BUILD_DIR)/omp
+CUDA_DIR:= $(BUILD_DIR)/cuda
 
 # Executable targets
 SERIAL_TARGET := $(BIN_DIR)/kmeans_serial
 OMP_TARGET := $(BIN_DIR)/kmeans_omp
+CUDA_TARGET := $(BIN_DIR)/kmeans_cuda
 
 DATA := datasets
 OUTPUT := output
@@ -34,15 +36,19 @@ DEPS := $(SERIAL_OBJS:.o=.d) $(OMP_OBJS:.o=.d)
 vpath %.cpp $(SRC_DIRS)
 
 # Default rule: build both serial and OpenMP executables
-all: serial omp
+all: serial omp cuda
 
 serial: $(SERIAL_TARGET)
 
 omp: $(OMP_TARGET)
 
+cuda: $(CUDA_TARGET)
+
 kmeans_serial: $(SERIAL_TARGET)
 
 kmeans_omp: $(OMP_TARGET)
+
+kmeans_cuda: $(OMP_TARGET)
 
 # Link serial executable
 $(SERIAL_TARGET): $(SERIAL_OBJS) | $(BIN_DIR)
@@ -52,6 +58,10 @@ $(SERIAL_TARGET): $(SERIAL_OBJS) | $(BIN_DIR)
 $(OMP_TARGET): $(OMP_OBJS) | $(BIN_DIR)
 	$(CXX) $(OMP_OBJS) -o $@ $(LDFLAGS) -fopenmp
 
+# Link CUDA executable
+# $(OMP_TARGET): $(OMP_OBJS) | $(BIN_DIR)
+# 	$(CXX) $(OMP_OBJS) -o $@ $(LDFLAGS) -fopenmp
+
 # Compile serial objects
 $(SERIAL_DIR)/%.o: %.cpp | $(SERIAL_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
@@ -59,6 +69,10 @@ $(SERIAL_DIR)/%.o: %.cpp | $(SERIAL_DIR)
 # Compile OpenMP objects
 $(OMP_DIR)/%.o: %.cpp | $(OMP_DIR)
 	$(CXX) $(CXXFLAGS) -fopenmp -DHAVE_OMP $(INCLUDES) -c $< -o $@
+
+# Compile CUDA objects
+# $(OMP_DIR)/%.o: %.cpp | $(OMP_DIR)
+# 	$(CXX) $(CXXFLAGS) -fopenmp -DHAVE_OMP $(INCLUDES) -c $< -o $@
 
 # Create directories if they do not exist
 $(BIN_DIR) $(SERIAL_DIR) $(OMP_DIR):
