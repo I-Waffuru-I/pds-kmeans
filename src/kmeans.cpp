@@ -313,6 +313,13 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 	}
 
 	// int outer = 0;
+	// int centroidNumber = centroids.size() / size.cols;
+	int centroidNumber = numClusters;
+
+	size_t stride = size.cols + 1;
+	// This is the shared mapa
+	std::vector<double> centroidMap(
+	    stride * centroidNumber);
 
 	for (int r = 0; r < repetitions; r++)
 	{
@@ -330,6 +337,7 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 		double avgDist = 0;
 		do
 		{
+			std::fill(centroidMap.begin(), centroidMap.end(), 0.0);
 
 			avgDist = 0;
 			// debugCentroidPoints(pointsCentroid);
@@ -338,23 +346,9 @@ int kmeansOMP(Rng &rng, const std::string &inputFile,
 
 			// std::cout << "Before" << std::endl;
 			// debugCentroids(centroids, size);
-			if (mode == "omp-outeronly")
-			{
-				// Route to omp-outeronly implementation when added
-				naiveClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                size, changed);
-			}
-			else if (mode == "omp-naive")
-			{
-				naiveBaseOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                       size, changed, 0);
-			}
-			else
-			{
-				// Default OMP mode: "omp" or "omp-naive"
-				naiveOMPClustering(centroids[r], allData, pointsCentroid[r], avgDist,
-				                   size, changed, 0);
-			}
+			// Default OMP mode: "omp" or "omp-naive"
+			naiveOMPClustering(centroids[r], allData, pointsCentroid[r], centroidMap, avgDist,
+			                   size, changed, centroidNumber);
 
 			// Write all centroids to file:
 			// Even disablen want dit zou raceconditions veroorzaken

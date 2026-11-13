@@ -131,21 +131,21 @@ void naiveClustering(std::vector<double> &centroids,
 
 // Voor OMP
 void naiveOMPClustering(std::vector<double> &centroids,
-                        std::vector<double> &allData, std::vector<int> &cPoints,
-                        double &avgDist, DataSize &size, bool &changed,
-                        int numThreads)
+                        std::vector<double> &allData, std::vector<int> &cPoints, std::vector<double> &centroidMap,
+                        double &avgDist, DataSize &size, bool &changed, int centroidNumber)
 {
-	int centroidNumber = centroids.size() / size.cols;
+
 	// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
 	// de dimentie eruit halen
 	// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-	// This is the shared mapa
-	std::vector<std::vector<double>> centroidMap(
-	    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+
+	size_t stride = size.cols + 1;
 
 	// We zetten ook eerst changed op false
 	changed = false;
 	// We gaan per dimentie hoveelheid de punten af
+
+	// std::cout << "stride: " << stride * centroidNumber << std::endl;
 
 	// We gebruiken eerst een gewone parallel zodat we voor een thread eerst een
 	// localCentroidMap kunnen definieren We gebruiken ook een reduce variabele
@@ -154,8 +154,10 @@ void naiveOMPClustering(std::vector<double> &centroids,
 	// RESULTAAT: 4.5 sec => 0.11
 #pragma omp parallel reduction(+ : avgDist) reduction(|| : changed)
 	{
-		std::vector<std::vector<double>> localCentroidMap(
-		    centroids.size() / size.cols, std::vector<double>(size.cols + 1));
+		// TODO: Dit moet er eigenlijk ook nog uitgezet worden zodat we niet elke iteratie een nieuwe creeren, niet efficient momenteel.
+		std::vector<double> localCentroidMap(
+		    stride * centroidNumber);
+		// std::fill(localCentroidMap.begin(), localCentroidMap.end(), 0.0);
 
 // THREADS moeten niet wachten voordat ze mergen dus dat kan al worden meegegegeven
 #pragma omp for nowait
@@ -163,11 +165,13 @@ void naiveOMPClustering(std::vector<double> &centroids,
 		{
 			double minDist =
 			    std::numeric_limits<double>::max(); // can only get better
-			int cIndex = size.cols + 1;
+			// int cIndex = size.cols + 1;
+			int cIndex = -1;
 
 			double partTime;
 			// We moeten ook de cI traverseren per cols
 
+			// std::cout << "Before s" << std::endl;
 			for (int cI = 0; cI < centroidNumber; ++cI)
 			{
 				double dist = 0;
@@ -222,9 +226,12 @@ void naiveOMPClustering(std::vector<double> &centroids,
 			for (size_t c = 0; c < size.cols; c++)
 			{
 				// std::cout << allData[c+i] << " , ";
-				localCentroidMap[cIndex][c] += allData[ii * size.cols + c];
+				// std::cout << "Map length: " << localCentroidMap.size() << " Current index: " << cIndex * stride + c << std::endl;
+				localCentroidMap[cIndex * stride + c] += allData[ii * size.cols + c];
+
+				// std::cout << "After s" << std::endl;
 			}
-			localCentroidMap[cIndex][size.cols] += 1;
+			localCentroidMap[cIndex * stride + size.cols] += 1;
 
 			// #ifdef HAVE_OMP
 			// 			partTime = omp_get_wtime() - partTime;
@@ -247,7 +254,7 @@ void naiveOMPClustering(std::vector<double> &centroids,
 			{
 				for (size_t c = 0; c < size.cols + 1; c++)
 				{
-					centroidMap[r][c] += localCentroidMap[r][c];
+					centroidMap[r * stride + c] += localCentroidMap[r * stride + c];
 				}
 			}
 		}
@@ -260,24 +267,26 @@ void naiveOMPClustering(std::vector<double> &centroids,
 
 	// AutoAverageTimer timer("centroid sum");
 	// timer.start();
-	for (size_t i = 0; i < centroidNumber; i++)
+	for (int i = 0; i < centroidNumber; i++)
 	{
 		// std::cout << "Centroid " << i << ":";
 		// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
 		// std::endl;
-		for (size_t p = 0; p < size.cols; p++)
+
+		double count = centroidMap[i * centroidNumber + size.cols];
+		if (count > 0)
 		{
-			// Total sum divided by total amount of points
-			// If  there are  no points  assigned to a  centroid we avoid dividing by
-			// zero
-			// #pragma omp critical
-			//       {
-			if (centroidMap[i][size.cols] != 0)
+			for (size_t p = 0; p < size.cols; p++)
 			{
+				// Total sum divided by total amount of points
+				// If  there are  no points  assigned to a  centroid we avoid dividing by
+				// zero
+				// #pragma omp critical
+				//       {
 				centroids[i * size.cols + p] =
-				    centroidMap[i][p] / centroidMap[i][size.cols];
+				    centroidMap[i * stride + p] / count;
+				// }
 			}
-			// }
 		}
 
 		// timer.stop();
