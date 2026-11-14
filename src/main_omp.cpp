@@ -111,9 +111,12 @@ int kmeans(Rng &rng, const std::string &inputFile,
 	{
 		mode = "omp";
 	}
-	return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions,
-	                 numBlocks, numThreads, centroidDebugFileName,
-	                 clusterDebugFileName, mode);
+	// return kmeansOMP(rng, inputFile, outputFileName, numClusters, repetitions,
+	//                  numBlocks, numThreads, centroidDebugFileName,
+	//                  clusterDebugFileName, mode);
+	return kmeansOMP2(rng, inputFile, outputFileName, numClusters, repetitions,
+	                  numBlocks, numThreads, centroidDebugFileName,
+	                  clusterDebugFileName, mode);
 }
 
 int mainCxx(const std::vector<std::string> &args)
