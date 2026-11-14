@@ -273,7 +273,7 @@ void naiveOMPClustering(std::vector<double> &centroids,
 		// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
 		// std::endl;
 
-		double count = centroidMap[i * centroidNumber + size.cols];
+		double count = centroidMap[i * stride + size.cols];
 		if (count > 0)
 		{
 			for (size_t p = 0; p < size.cols; p++)
