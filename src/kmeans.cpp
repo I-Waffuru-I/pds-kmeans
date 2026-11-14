@@ -576,47 +576,54 @@ int kmeansOMP2(Rng &rng, const std::string &inputFile,
 
 		bool changed = true;
 		double avgDist = 0;
-		do
+#pragma omp parallel
 		{
-			std::fill(centroidMap.begin(), centroidMap.end(), 0.0);
+			std::vector<double> localCentroidMap(
+			    stride * centroidNumber);
 
-			avgDist = 0;
-			// debugCentroidPoints(pointsCentroid);
-
-			// oldCentroids = centroids;
-
-			// std::cout << "Before" << std::endl;
-			// debugCentroids(centroids, size);
-			// Default OMP mode: "omp" or "omp-naive"
-			// naiveOMPClustering(centroids[r], allData, pointsCentroid[r], centroidMap, avgDist,
-			//                    size, changed, centroidNumber);
-			// centroids -> centroids, allData -> allData, cPoints -> pointsCentroid[r], centroidMap -> centroidMap, avgDist -> avgDist, size -> size, changed -> changed, centroidNumber -> centroidNumber
-			// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
-			// de dimentie eruit halen
-			// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
-
-			size_t stride = size.cols + 1;
-
-			// We zetten ook eerst changed op false
-			changed = false;
-			// We gaan per dimentie hoveelheid de punten af
-
-			// std::cout << "stride: " << stride * centroidNumber << std::endl;
-
-			// We gebruiken eerst een gewone parallel zodat we voor een thread eerst een
-			// localCentroidMap kunnen definieren We gebruiken ook een reduce variabele
-			// voor de avgDist en de changed bool zodat we critical en atomic kunnen
-			// vermijden
-			// RESULTAAT: 4.5 sec => 0.11
-#pragma omp parallel reduction(+ : avgDist) reduction(|| : changed)
+			do
 			{
+#pragma omp barrier
+#pragma omp single
+				{
+					std::fill(centroidMap.begin(), centroidMap.end(), 0.0);
+					changed = false;
+					avgDist = 0;
+				}
+
+				std::fill(localCentroidMap.begin(), localCentroidMap.end(), 0.0);
+				// debugCentroidPoints(pointsCentroid);
+
+				// oldCentroids = centroids;
+
+				// std::cout << "Before" << std::endl;
+				// debugCentroids(centroids, size);
+				// Default OMP mode: "omp" or "omp-naive"
+				// naiveOMPClustering(centroids[r], allData, pointsCentroid[r], centroidMap, avgDist,
+				//                    size, changed, centroidNumber);
+				// centroids -> centroids, allData -> allData, cPoints -> pointsCentroid[r], centroidMap -> centroidMap, avgDist -> avgDist, size -> size, changed -> changed, centroidNumber -> centroidNumber
+				// We slaan hier de begin index van elk punt op en kunnen dit aan de hand van
+				// de dimentie eruit halen
+				// std::pmr::unordered_map<int, std::vector<double>> centroidMap;
+
+				size_t stride = size.cols + 1;
+
+				// We zetten ook eerst changed op false
+				// We gaan per dimentie hoveelheid de punten af
+
+				// std::cout << "stride: " << stride * centroidNumber << std::endl;
+
+				// We gebruiken eerst een gewone parallel zodat we voor een thread eerst een
+				// localCentroidMap kunnen definieren We gebruiken ook een reduce variabele
+				// voor de avgDist en de changed bool zodat we critical en atomic kunnen
+				// vermijden
+				// RESULTAAT: 4.5 sec => 0.11
 				// TODO: Dit moet er eigenlijk ook nog uitgezet worden zodat we niet elke iteratie een nieuwe creeren, niet efficient momenteel.
-				std::vector<double> localCentroidMap(
-				    stride * centroidNumber);
+
 				// std::fill(localCentroidMap.begin(), localCentroidMap.end(), 0.0);
 
 // THREADS moeten niet wachten voordat ze mergen dus dat kan al worden meegegegeven
-#pragma omp for nowait
+#pragma omp for reduction(+ : avgDist) reduction(|| : changed)
 				for (size_t ii = 0; ii < size.rows; ++ii)
 				{
 					double minDist =
@@ -714,60 +721,64 @@ int kmeansOMP2(Rng &rng, const std::string &inputFile,
 						}
 					}
 				}
-			}
 
-			avgDist = avgDist / size.rows;
+				// std::cout << "Total time on thread: " << omp_get_thread_num() << " for
+				// observerd opp: " << totalTime << std::endl;
 
-			// std::cout << "Total time on thread: " << omp_get_thread_num() << " for
-			// observerd opp: " << totalTime << std::endl;
-
-			// AutoAverageTimer timer("centroid sum");
-			// timer.start();
-			for (int i = 0; i < centroidNumber; i++)
-			{
-				// std::cout << "Centroid " << i << ":";
-				// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
-				// std::endl;
-
-				double count = centroidMap[i * stride + size.cols];
-				if (count > 0)
+				// AutoAverageTimer timer("centroid sum");
+				// timer.start();
+#pragma omp barrier
+#pragma omp single
 				{
-					for (size_t p = 0; p < size.cols; p++)
+
+					avgDist = avgDist / size.rows;
+					for (int i = 0; i < centroidNumber; i++)
 					{
-						// Total sum divided by total amount of points
-						// If  there are  no points  assigned to a  centroid we avoid dividing by
-						// zero
-						// #pragma omp critical
-						//       {
-						centroids[r][i * size.cols + p] =
-						    centroidMap[i * stride + p] / count;
-						// }
+						// std::cout << "Centroid " << i << ":";
+						// std::cout << "Amount of points: " << centroidMap[i][size.cols] <<
+						// std::endl;
+
+						double count = centroidMap[i * stride + size.cols];
+						if (count > 0)
+						{
+							for (size_t p = 0; p < size.cols; p++)
+							{
+								// Total sum divided by total amount of points
+								// If  there are  no points  assigned to a  centroid we avoid dividing by
+								// zero
+								// #pragma omp critical
+								//       {
+								centroids[r][i * size.cols + p] =
+								    centroidMap[i * stride + p] / count;
+								// }
+							}
+						}
+
+						// timer.stop();
 					}
+					// timer.stop();
+
+					// Write all centroids to file:
+					// Even disablen want dit zou raceconditions veroorzaken
+					if (changed)
+					{
+
+						if (centroidDebugFile.is_open())
+							centroidsDebug[r].push_back(centroids[r]);
+						// centroidDebugFile.write(centroids[r], size.cols);
+					}
+					// Om een of andere reden moet dit er wel uit blijven en nog een keer
+					// geschreven worden
+					// Even disablen want dit zou racecondigtions veroorzaken.
+					// TODO: Vervangen door een array met wat te schrijven?
+					// clustersDebugFile.write(pointsCentroid[r], size.rows);
+					if (clustersDebugFile.is_open())
+						clustersDebug[r].push_back(pointsCentroid[r]);
+					numSteps++;
 				}
 
-				// timer.stop();
-			}
-			// timer.stop();
-
-			// Write all centroids to file:
-			// Even disablen want dit zou raceconditions veroorzaken
-			if (changed)
-			{
-
-				if (centroidDebugFile.is_open())
-					centroidsDebug[r].push_back(centroids[r]);
-				// centroidDebugFile.write(centroids[r], size.cols);
-			}
-			// Om een of andere reden moet dit er wel uit blijven en nog een keer
-			// geschreven worden
-			// Even disablen want dit zou racecondigtions veroorzaken.
-			// TODO: Vervangen door een array met wat te schrijven?
-			// clustersDebugFile.write(pointsCentroid[r], size.rows);
-			if (clustersDebugFile.is_open())
-				clustersDebug[r].push_back(pointsCentroid[r]);
-
-			numSteps++;
-		} while (changed);
+			} while (changed);
+		}
 
 		// std::cout << "Loop completed" << std::endl;
 		// std::cout << "Best dist: " << bestDistSquaredSum
