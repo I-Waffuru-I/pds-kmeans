@@ -16,14 +16,15 @@ need_bins "$BIN_SERIAL" "$BIN_OMP"
 ensure_datasets
 init_csv_k speedup
 
-for run in $(seq 1 5); do
+for _ in $(seq 1 5); do
 	for k in $(seq 5 15); do
 		run_timed_with_k speedup "$BIN_SERIAL" 1 serial "$k"
 
-		run_timed_with_k speedup "$BIN_SERIAL" 1 omp "$k"
+		run_timed_with_k speedup "$BIN_OMP" 1 omp "$k"
 
-		# speedup at max threads
-		run_timed_with_k speedup "$BIN_OMP" "$MAX_THREADS" omp "$k"
+		run_timed_with_k speedup "$BIN_OMP" 16 omp "$k"
+
+		run_timed_with_k speedup "$BIN_OMP" 64 omp "$k"
 	done
 done
 echo "Results in $CSV"

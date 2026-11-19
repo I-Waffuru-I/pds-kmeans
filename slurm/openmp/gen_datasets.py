@@ -12,9 +12,9 @@ def blobs(n, d, k):
 
 def write(path, a):
     if os.path.exists(path):
-        print("exists, keeping", path); return
+        t8("exists, keeping", path); return
     np.savetxt(path, a, delimiter=",", fmt="%.6f")
-    print("wrote", path, a.shape)
+    t8("wrote", path, a.shape)
 
 write("datasets/100000x5.csv", blobs(100000, 5, 10))
 write("datasets/mouse_500x2.csv", blobs(500, 2, 3))

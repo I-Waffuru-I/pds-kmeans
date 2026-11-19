@@ -34,7 +34,7 @@ if os.path.exists(f):
         m.loc[m["mode"] == mode, "amdahl_speedup"] = 1 / ((1 - p) + p / m.loc[m["mode"] == mode, "threads"])
     m["serial_s"] = base
     out = os.path.join(res, "thread_scaling_summary.csv"); m.to_csv(out, index=False)
-    print(m.to_string(index=False))
+    t8(m.to_string(index=False))
     # NOTE: p is fitted at max threads, so the Amdahl curve passes through that point by
     # construction. For an independent theoretical value, measure the serial fraction
     # (e.g. time of file read + init + merge) and set p yourself.
@@ -54,7 +54,7 @@ for name in ["serial_vs_omp", "parallel_levels", "inner_first_vs_latest"]:
     f = os.path.join(res, name + ".csv")
     if os.path.exists(f):
         df = pd.read_csv(f); m = mean_times(df)
-        print(f"\n== {name} ==\n{m.to_string(index=False)}")
+        t8(f"\n== {name} ==\n{m.to_string(index=False)}")
         m.to_csv(os.path.join(res, name + "_summary.csv"), index=False)
         if plt and name == "parallel_levels":
             fig, ax = plt.subplots(figsize=(6, 4))
