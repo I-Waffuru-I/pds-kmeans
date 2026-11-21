@@ -232,6 +232,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
     bestDistSquaredSum = avgDist;
     bestCluster = pointsCentroid;
   }
+  std::cout << "steps this rep: " << numSteps << std::endl;
 
   // stepsPerRepetition[r] = numSteps;
 
@@ -265,6 +266,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   cudaFree(pPointToCentroid);
   cudaFree(pcentroids);
   cudaFree(pdata);
+  cudaFree(pchanged);
   cudaEventDestroy(startAllEvt);
   cudaEventDestroy(stopAllEvt);
 
