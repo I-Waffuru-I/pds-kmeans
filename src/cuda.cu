@@ -83,7 +83,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   {
     int dev;
     cudaGetDeviceCount(&dev);
-    if (dev == 1) {
+    if (dev < 1) {
       std::cout << "No CUDA device found!" << std::endl;
       exit(1);
     }

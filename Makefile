@@ -54,7 +54,7 @@ vpath %.cpp $(SRC_DIRS)
 vpath %.cu $(SRC_DIRS)
 
 # Default rule: build both serial and OpenMP executables
-all: serial omp
+all: serial omp cuda
 
 serial: $(SERIAL_TARGET)
 omp: $(OMP_TARGET)
@@ -62,7 +62,7 @@ cuda: $(CUDA_TARGET)
 
 kmeans_serial: $(SERIAL_TARGET)
 kmeans_omp: $(OMP_TARGET)
-kmeans_omp: $(CUDA_TARGET)
+kmeans_cuda: $(CUDA_TARGET)
 
 # 1. Link object files into executables
 $(SERIAL_TARGET): $(SERIAL_OBJS) | $(BIN_DIR)
