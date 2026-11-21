@@ -18,6 +18,8 @@ MAX_THREADS="${MAX_THREADS:-${SLURM_CPUS_PER_TASK:-32}}"
 
 BIN_SERIAL="$ROOT/build/bin/kmeans_serial"
 BIN_OMP="$ROOT/build/bin/kmeans_omp"
+BIN_CUDA="$ROOT/build/bin/kmeans_cuda"
+
 RESULTS="$ROOT/results"
 OUT="$ROOT/output"
 mkdir -p "$RESULTS" "$OUT" "$ROOT/logs" "$ROOT/build/bin"

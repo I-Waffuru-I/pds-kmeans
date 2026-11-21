@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 //                      double &avgDist, DataSize &size, bool &changed)
 __global__ void assignPtsToCentroids(const double *data, double *centroids,
                                      double *pointInCentroid, size_t rows,
-                                     size_t cols, size_t k) {
+                                     size_t cols, size_t k, bool *changed) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= rows)
     return;
@@ -40,7 +40,11 @@ __global__ void assignPtsToCentroids(const double *data, double *centroids,
     }
   };
 
-  pointInCentroid[idx] = bestK;
+  if (pointInCentroid[idx] != bestK) {
+    pointInCentroid[idx] = bestK;
+    // data race boeit nie want t'is toch ma T/F
+    *changed = true;
+  }
 }
 
 // tmp werken met serial stuk om te checken of de eerste kernel werkt
@@ -79,8 +83,8 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   {
     int dev;
     cudaGetDeviceCount(&dev);
-    if(dev == 1) {
-      std::cout << "No CUDA device found!" << std::endl;;
+    if (dev == 1) {
+      std::cout << "No CUDA device found!" << std::endl;
       exit(1);
     }
   }
@@ -119,26 +123,28 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
 
   double bestDistSquaredSum =
       std::numeric_limits<double>::max(); // can only get better
-  std::vector<int> bestCluster(datafmt.rows);
+  std::vector<double> bestCluster(datafmt.rows);
   // to save the number of steps each rep needed
   std::vector<size_t> stepsPerRepetition(repetitions);
   std::vector<double> centroids(numClusters * datafmt.cols);
   // duuw alle point dists hier in en tel ze op
   std::vector<double> dists(datafmt.cols);
   // list of what point belongs to what centroid
-  std::vector<int> pointsCentroid(datafmt.rows);
+  std::vector<double> pointsCentroid(datafmt.rows);
 
   cudaError_t err;
   double *pcentroids, *pdata, *pPointToCentroid;
+  bool *pchanged;
 
   // malloc space for output centroid IDs
   cudaMalloc(&pPointToCentroid, datafmt.rows * sizeof(double));
   // list of centroids
   cudaMalloc(&pcentroids, numClusters * datafmt.cols * sizeof(double));
   cudaMalloc(&pdata, datafmt.rows * datafmt.cols * sizeof(double));
+  cudaMalloc(&pchanged, sizeof(bool));
 
   // pointToCentroid init met 0, dus no need
-  cudaMemcpy(allData.data(), pdata,
+  cudaMemcpy(pdata, allData.data(),
              datafmt.rows * datafmt.cols * sizeof(double),
              cudaMemcpyHostToDevice);
 
@@ -170,44 +176,57 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   // start anew & push to gpu for each rep
   initCentroids(rng, centroids, allData, datafmt);
   centroidDebugFile.write(centroids, datafmt.cols);
-  cudaMemcpy(centroids.data(), pcentroids,
+  cudaMemcpy(pcentroids, centroids.data(),
              datafmt.cols * numClusters * sizeof(double),
              cudaMemcpyHostToDevice);
 
-  bool changed = true;
+  bool changed = false;
   double avgDist = 0;
   size_t numSteps = 0;
-  // while (changed) {
-  avgDist = 0;
+  do {
+    changed = false;
+    avgDist = 0;
 
-  std::cout << "After" << std::endl;
-  debugCentroids(centroids, datafmt);
+    std::cout << "Before" << std::endl;
+    debugCentroids(centroids, datafmt);
+    {
+      cudaMemset(pchanged, 0, sizeof(bool));
+      // run kernel
+      assignPtsToCentroids<<<blocks, threads>>>(
+          pdata, pcentroids, pPointToCentroid, datafmt.rows, datafmt.cols,
+          numClusters, pchanged);
+      err = cudaDeviceSynchronize();
+      if (err != cudaSuccess) {
+        std::cout << "Runtime error: " << err << std::endl;
+        exit(1);
+      }
 
-  // run kernel
-  assignPtsToCentroids<<<blocks, threads>>>(pdata, pcentroids, pPointToCentroid,
-                                            datafmt.rows, datafmt.cols,
-                                            numClusters);
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    std::cout << "Runtime error: " << err << std::endl;
-    exit(1);
-  }
+      cudaMemcpy(centroids.data(), pcentroids,
+                 datafmt.cols * numClusters * sizeof(double),
+                 cudaMemcpyDeviceToHost);
+      cudaMemcpy(pointsCentroid.data(), pPointToCentroid,
+                 datafmt.rows * sizeof(double), cudaMemcpyDeviceToHost);
 
-  cudaMemcpy(pcentroids, centroids.data(),
-             datafmt.cols * numClusters * sizeof(double),
-             cudaMemcpyDeviceToHost);
-  cudaMemcpy(pPointToCentroid, pointsCentroid.data(),
-             datafmt.rows * sizeof(double), cudaMemcpyDeviceToHost);
+      cudaMemcpy(&changed, pchanged, sizeof(bool), cudaMemcpyDeviceToHost);
+      if (!changed)
+        break;
 
-  std::cout << "Old" << std::endl;
-  debugCentroids(centroids, datafmt);
+      updateCentroids(allData.data(), centroids.data(), pointsCentroid.data(),
+                      datafmt.rows, datafmt.cols, numClusters);
+      cudaMemcpy(pcentroids, centroids.data(),
+                 numClusters * datafmt.cols * sizeof(double),
+                 cudaMemcpyHostToDevice);
+    }
 
-  centroidDebugFile.write(centroids, datafmt.cols);
-  clustersDebugFile.write(pointsCentroid, datafmt.rows);
+    std::cout << "After" << std::endl;
+    debugCentroids(centroids, datafmt);
 
-  numSteps++;
+    centroidDebugFile.write(centroids, datafmt.cols);
+    clustersDebugFile.write(pointsCentroid, datafmt.rows);
 
-  // } // end while changed
+    numSteps++;
+
+  } while (changed); // end while changed
 
   if (avgDist < bestDistSquaredSum) {
     bestDistSquaredSum = avgDist;
