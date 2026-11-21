@@ -187,8 +187,10 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
     changed = false;
     avgDist = 0;
 
-    std::cout << "Before" << std::endl;
-    debugCentroids(centroids, datafmt);
+    if (numSteps == 0) {
+      std::cout << "Before" << std::endl;
+      debugCentroids(centroids, datafmt);
+    }
     {
       cudaMemset(pchanged, 0, sizeof(bool));
       // run kernel
@@ -218,9 +220,10 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
                  cudaMemcpyHostToDevice);
     }
 
-    std::cout << "After" << std::endl;
-    debugCentroids(centroids, datafmt);
-
+    if (numSteps == 0) {
+      std::cout << "After" << std::endl;
+      debugCentroids(centroids, datafmt);
+    }
     centroidDebugFile.write(centroids, datafmt.cols);
     clustersDebugFile.write(pointsCentroid, datafmt.rows);
 
@@ -232,6 +235,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
     bestDistSquaredSum = avgDist;
     bestCluster = pointsCentroid;
   }
+  std::cout << "steps this rep: " << numSteps << std::endl;
 
   // stepsPerRepetition[r] = numSteps;
 
@@ -265,6 +269,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   cudaFree(pPointToCentroid);
   cudaFree(pcentroids);
   cudaFree(pdata);
+  cudaFree(pchanged);
   cudaEventDestroy(startAllEvt);
   cudaEventDestroy(stopAllEvt);
 
