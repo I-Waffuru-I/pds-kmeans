@@ -143,7 +143,8 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   cudaMalloc(&pdata, datafmt.rows * datafmt.cols * sizeof(double));
   cudaMalloc(&pchanged, sizeof(bool));
 
-  // pointToCentroid init met 0, dus no need
+  cudaMemcpy(pPointToCentroid, pointsCentroid.data(),
+             datafmt.rows * sizeof(double), cudaMemcpyHostToDevice);
   cudaMemcpy(pdata, allData.data(),
              datafmt.rows * datafmt.cols * sizeof(double),
              cudaMemcpyHostToDevice);
@@ -172,80 +173,79 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
 
   cudaEventRecord(startAllEvt);
 
-  // for (int r = 0; r < repetitions; r++) {
-  // start anew & push to gpu for each rep
-  initCentroids(rng, centroids, allData, datafmt);
-  centroidDebugFile.write(centroids, datafmt.cols);
-  cudaMemcpy(pcentroids, centroids.data(),
-             datafmt.cols * numClusters * sizeof(double),
-             cudaMemcpyHostToDevice);
+  for (int r = 0; r < repetitions; r++) {
+    // start anew & push to gpu for each rep
+    initCentroids(rng, centroids, allData, datafmt);
+    centroidDebugFile.write(centroids, datafmt.cols);
 
-  bool changed = false;
-  double avgDist = 0;
-  size_t numSteps = 0;
-  do {
-    changed = false;
-    avgDist = 0;
+    bool changed = false;
+    double avgDist;
+    size_t numSteps = 0;
+    do {
+      changed = false;
+      avgDist = 0;
 
-    if (numSteps == 0) {
-      std::cout << "Before" << std::endl;
-      debugCentroids(centroids, datafmt);
-    }
-    {
-      cudaMemset(pchanged, 0, sizeof(bool));
-      // run kernel
-      assignPtsToCentroids<<<blocks, threads>>>(
-          pdata, pcentroids, pPointToCentroid, datafmt.rows, datafmt.cols,
-          numClusters, pchanged);
-      err = cudaDeviceSynchronize();
-      if (err != cudaSuccess) {
-        std::cout << "Runtime error: " << err << std::endl;
-        exit(1);
+      cudaMemcpy(pcentroids, centroids.data(),
+                 datafmt.cols * numClusters * sizeof(double),
+                 cudaMemcpyHostToDevice);
+
+      if (numSteps == 0) {
+        std::cout << "Before" << std::endl;
+        debugCentroids(centroids, datafmt);
       }
 
-      cudaMemcpy(centroids.data(), pcentroids,
-                 datafmt.cols * numClusters * sizeof(double),
-                 cudaMemcpyDeviceToHost);
-      cudaMemcpy(pointsCentroid.data(), pPointToCentroid,
-                 datafmt.rows * sizeof(double), cudaMemcpyDeviceToHost);
+      { // run scope
+        cudaMemset(pchanged, 0, sizeof(bool));
+        // run kernel
+        assignPtsToCentroids<<<blocks, threads>>>(
+            pdata, pcentroids, pPointToCentroid, datafmt.rows, datafmt.cols,
+            numClusters, pchanged);
 
-      cudaMemcpy(&changed, pchanged, sizeof(bool), cudaMemcpyDeviceToHost);
-      if (!changed)
-        break;
+        err = cudaDeviceSynchronize();
+        if (err != cudaSuccess) {
+          std::cout << "Runtime error: " << err << std::endl;
+          exit(1);
+        }
 
-      updateCentroids(allData.data(), centroids.data(), pointsCentroid.data(),
-                      datafmt.rows, datafmt.cols, numClusters);
-      cudaMemcpy(pcentroids, centroids.data(),
-                 numClusters * datafmt.cols * sizeof(double),
-                 cudaMemcpyHostToDevice);
+        cudaMemcpy(centroids.data(), pcentroids,
+                   datafmt.cols * numClusters * sizeof(double),
+                   cudaMemcpyDeviceToHost);
+        cudaMemcpy(pointsCentroid.data(), pPointToCentroid,
+                   datafmt.rows * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&changed, pchanged, sizeof(bool), cudaMemcpyDeviceToHost);
+
+        if (!changed)
+          break;
+        else
+          updateCentroids(allData.data(), centroids.data(),
+                          pointsCentroid.data(), datafmt.rows, datafmt.cols,
+                          numClusters);
+      } // end run scope
+
+      if (numSteps == 0) {
+        std::cout << "After" << std::endl;
+        debugCentroids(centroids, datafmt);
+        std::cout << "changed " << changed << std::endl;
+      }
+      centroidDebugFile.write(centroids, datafmt.cols);
+      clustersDebugFile.write(pointsCentroid, datafmt.rows);
+
+      numSteps++;
+
+    } while (changed); // end while changed
+
+    if (avgDist < bestDistSquaredSum) {
+      bestDistSquaredSum = avgDist;
+      bestCluster = pointsCentroid;
     }
 
-    if (numSteps == 0) {
-      std::cout << "After" << std::endl;
-      debugCentroids(centroids, datafmt);
-    }
-    centroidDebugFile.write(centroids, datafmt.cols);
-    clustersDebugFile.write(pointsCentroid, datafmt.rows);
+    std::cout << "steps this rep: " << numSteps << std::endl;
+    stepsPerRepetition[r] = numSteps;
 
-    numSteps++;
+    centroidDebugFile.close();
+    clustersDebugFile.close();
 
-  } while (changed); // end while changed
-
-  if (avgDist < bestDistSquaredSum) {
-    bestDistSquaredSum = avgDist;
-    bestCluster = pointsCentroid;
-  }
-  std::cout << "steps this rep: " << numSteps << std::endl;
-
-  // stepsPerRepetition[r] = numSteps;
-
-  // Make sure debug logging is only done on first iteration ; subsequent
-  // checks with is_open will indicate that no logging needs to be done
-  // anymore.
-  centroidDebugFile.close();
-  clustersDebugFile.close();
-
-  // } // end reps
+  } // end reps
   cudaEventRecord(stopAllEvt);
   cudaEventSynchronize(stopAllEvt);
 

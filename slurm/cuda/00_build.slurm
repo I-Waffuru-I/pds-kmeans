@@ -11,6 +11,10 @@
 #source /data/leuven/303/vsc30380/slurmhooks
 source slurm/common.sh
 
+module purge
+module load GCC/10.3.0
+module load CUDA/11.7.0
+
 echo "== build =="
 make clean
 make cuda

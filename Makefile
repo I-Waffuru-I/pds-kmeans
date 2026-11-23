@@ -62,7 +62,7 @@ cuda: $(CUDA_TARGET)
 
 kmeans_serial: $(SERIAL_TARGET)
 kmeans_omp: $(OMP_TARGET)
-kmeans_omp: $(CUDA_TARGET)
+kmeans_cuda: $(CUDA_TARGET)
 
 # 1. Link object files into executables
 $(SERIAL_TARGET): $(SERIAL_OBJS) | $(BIN_DIR)
@@ -75,8 +75,6 @@ $(OMP_TARGET): $(OMP_OBJS) | $(BIN_DIR)
 $(OMP_DIR)/%.o: %.cpp | $(OMP_DIR)
 	$(CXX) $(CXXFLAGS) -fopenmp -DHAVE_OMP $(INCLUDES) -c $< -o $@
 
-# 2. Compile each .cpp file into its own .o file
-
 
 $(CUDA_TARGET): $(CUDA_OBJS) | $(BIN_DIR)
 	$(NVCC) $(CUDA_OBJS) -o $@ $(LDFLAGS)
@@ -85,6 +83,7 @@ $(CUDA_DIR)/%.o: %.cpp | $(CUDA_DIR)
 # CUDA files go through nvcc; -MMD/-MF keeps header dependency tracking working
 $(CUDA_DIR)/%.o: %.cu | $(CUDA_DIR)
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -MMD -MF $(@:.o=.d) -c $< -o $@
+
 
 # Create build directories if they do not exist
 $(BIN_DIR) $(SERIAL_DIR) $(OMP_DIR) $(CUDA_DIR):
@@ -104,7 +103,7 @@ run-cuda: $(CUDA_TARGET)
 
 
 # Debug trace rules
-debug: debug-omp
+debug: debug-cuda
 
 debug-serial: $(SERIAL_TARGET)
 	./$(SERIAL_TARGET) $(EXTRAFLAGS) --input $(DATA)/mouse_500x2.csv \
