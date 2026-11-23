@@ -30,8 +30,8 @@ THREADS ?= 1
 
 ARGS ?= --input $(DATA)/1Mx4.csv \
 	--output $(OUTPUT)/output.csv \
-	--repetitions 1 --k 10 \
-	--threads $(THREADS) \
+	--repetitions 5 --k 10 \
+	--threads 8 \
 	--seed 1337
 
 # ARGS ?= --input $(DATA)/3M_3000000x6.csv \
