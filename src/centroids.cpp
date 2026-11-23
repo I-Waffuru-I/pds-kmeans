@@ -28,7 +28,7 @@ void initCentroids(Rng &rng, std::vector<double> &centroids,
 void debugCentroids(std::vector<double> &centroids, DataSize &size)
 {
 	std::cout << "debug centroid: " << std::endl;
-	for (int r = 0; r < centroids.size() / size.cols; r++)
+	for (size_t r = 0; r < centroids.size() / size.cols; r++)
 	{
 		for (int c = 0; c < size.cols; c++)
 		{
@@ -41,7 +41,7 @@ void debugCentroids(std::vector<double> &centroids, DataSize &size)
 void debugCentroidPoints(std::vector<int> &pCentroid)
 {
 	std::cout << "Debug centroid points" << std::endl;
-	for (int r = 0; r < pCentroid.size(); r++)
+	for (size_t r = 0; r < pCentroid.size(); r++)
 	{
 		std::cout << pCentroid[r] << ",";
 	}
