@@ -28,7 +28,7 @@ OUTPUT := output
 
 THREADS ?= 1
 
-ARGS ?= --input $(DATA)/1Mx4.csv \
+ARGS ?= --input $(DATA)/100000x5.csv \
 	--output $(OUTPUT)/output.csv \
 	--repetitions 1 --k 10 \
 	--threads $(THREADS) \

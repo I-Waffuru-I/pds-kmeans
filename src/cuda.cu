@@ -3,6 +3,7 @@
 #include "helpers.hpp"
 #include "rng.h"
 #include <cfloat>
+#include <cstdio>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -183,6 +184,8 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   bool changed = false;
   double avgDist = 0;
   size_t numSteps = 0;
+
+  printf("rep: %d\n", numSteps);
   do {
     changed = false;
     avgDist = 0;
@@ -191,12 +194,15 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
       std::cout << "Before" << std::endl;
       debugCentroids(centroids, datafmt);
     }
+
+    std::cout << "Step: " << numSteps << std::endl;
     {
       cudaMemset(pchanged, 0, sizeof(bool));
       // run kernel
       assignPtsToCentroids<<<blocks, threads>>>(
           pdata, pcentroids, pPointToCentroid, datafmt.rows, datafmt.cols,
           numClusters, pchanged);
+
       err = cudaDeviceSynchronize();
       if (err != cudaSuccess) {
         std::cout << "Runtime error: " << err << std::endl;
@@ -237,7 +243,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
   }
   std::cout << "steps this rep: " << numSteps << std::endl;
 
-  // stepsPerRepetition[r] = numSteps;
+  stepsPerRepetition[r] = numSteps;
 
   // Make sure debug logging is only done on first iteration ; subsequent
   // checks with is_open will indicate that no logging needs to be done
