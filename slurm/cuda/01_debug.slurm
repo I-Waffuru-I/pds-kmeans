@@ -12,13 +12,12 @@
 
 #SBATCH --time=00:05:00
 #SBATCH --ntasks=1
-#SBATCH --exclusive
 
 #source /data/leuven/303/vsc30380/slurmhooks
 
 source slurm/common.sh
 
-need_bins  "$BIN_CUDA"
+need_bins "$BIN_CUDA"
 echo $DEBUG_DATASET
 DATASET="$DEBUG_DATASET"
 ensure_datasets

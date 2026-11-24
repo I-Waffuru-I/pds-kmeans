@@ -81,6 +81,34 @@ run_timed_with_k() {
 	done
 }
 
+# ---- CUDA-specific tunables & logging ----
+BLOCK_LIST="${BLOCK_LIST:-32 64 128 256 512 1024}"
+K_LIST="${K_LIST:-4 8 16 32 64 128}"
+CUDA_MODES="${CUDA_MODES:-cuda}" # add e.g. "cuda cuda_shared" if you have multiple modes
+CUDA_RESULTS="$RESULTS/cuda"
+mkdir -p "$CUDA_RESULTS"
+
+# run_timed_cuda <label> <bin> <threads_per_block> <mode> <k> [extra args...]
+run_timed_cuda() {
+	local label="$1" bin="$2" threads="$3" mode="$4" k="$5"
+	shift 5
+	local run out stdout steps ds_name gpu_name
+	ds_name=$(basename "$DATASET")
+	gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1 | tr ' ' '_' || echo "cpu")
+
+	for run in $(seq 1 "$RUNS"); do
+		out="$OUT/${label}_${mode}_t${threads}_k${k}_r${run}.csv"
+		stdout=$("$bin" --input "$DATASET" --output "$out" --repetitions "$REPS" \
+			--k "$k" --seed "$SEED" --threads "$threads" --mode "$mode" "$@" \
+			2>>"$CUDA_RESULTS/stderr_${label}.log" | tail -n1)
+		# stdout: type,blocks,threads,file,seed,clusters,reps,bestdist,seconds
+		IFS=',' read -r _ actual_blocks actual_threads _ _ _ _ dist secs <<<"$stdout"
+		steps=$(head -n1 "$out" | sed 's/# Steps: *//; s/,/;/g')
+		echo "$label,$gpu_name,$ds_name,$mode,$actual_blocks,$actual_threads,$k,$run,$dist,$secs,$steps" >>"$CSV"
+		echo "[$label] gpu=$gpu_name ds=$ds_name mode=$mode blocks=$actual_blocks threads=$actual_threads k=$k run=$run -> ${secs}s"
+	done
+}
+
 init_csv() { # init_csv <name>
 	CSV="$RESULTS/$1.csv"
 	echo "label,mode,threads,run,bestdist,seconds,steps" >"$CSV"
@@ -88,4 +116,8 @@ init_csv() { # init_csv <name>
 init_csv_k() { # init_csv <name>
 	CSV="$RESULTS/$1.csv"
 	echo "label,mode,threads,run,bestdist,seconds,k,steps" >"$CSV"
+}
+init_cuda_csv() { # init_cuda_csv <name>
+	CSV="$CUDA_RESULTS/$1.csv"
+	echo "label,gpu,dataset,mode,blocks,threads,k,run,bestdist,seconds,steps" >"$CSV"
 }
