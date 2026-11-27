@@ -33,9 +33,24 @@ __global__ void assignPtsToCentroids(const double *data,
                                      int *pointInCentroid, double *sums,
                                      int *counts, double *sqDist, size_t rows,
                                      size_t cols, size_t k, bool *changed) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= rows)
-    return;
+
+  extern __shared__ double smem[];
+  double *sCentroids = smem;             // k*cols
+  double *sSums = sCentroids + k * cols; // k*cols
+  double *sTotal = sSums + k * cols;     // 1
+  int *sCounts = (int *)(sTotal + 1);    // k   (ints last: alignment)
+
+  // init
+  for (size_t i = threadIdx.x; i < k * cols; i += blockDim.x) {
+    sCentroids[i] = centroids[i];
+    sSums[i] = 0.0;
+  }
+  for (size_t i = threadIdx.x; i < k; i += blockDim.x)
+    sCounts[i] = 0;
+  if (threadIdx.x == 0)
+    *sTotal = 0.0;
+
+  __syncthreads();
 
   // make kernel dim (512 or sum, numcols zo elke col thread een item doet ipv
   // for loop )
@@ -43,33 +58,49 @@ __global__ void assignPtsToCentroids(const double *data,
   // being pixel p
   // find closest cluster
   // check if this can be sped up through coalescent MA
-  int bestK = 0;
-  double minDist = DBL_MAX;
-  for (size_t j = 0; j < k; j++) {
-    double d = 0;
-    // TODO idx & idy gebruiken ipv forloop
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < rows) { // moet tot syncthreads hieronder geraken
+    int bestK = 0;
+    double minDist = DBL_MAX;
+    for (size_t j = 0; j < k; j++) {
+      double d = 0;
+      // TODO idx & idy gebruiken ipv forloop
+      for (size_t c = 0; c < cols; c++) {
+        double diff = data[idx * cols + c] - sCentroids[j * cols + c];
+        d += diff * diff;
+      }
+      if (d < minDist) {
+        minDist = d;
+        bestK = (int)j;
+      }
+    }
+
+    if (pointInCentroid[idx] != bestK) {
+      pointInCentroid[idx] = bestK;
+      // data race boeit nie want t'is toch ma T/F
+      *changed = true;
+    }
+
+    // maakt volgorde hier uit? idk chief
     for (size_t c = 0; c < cols; c++) {
-      double diff = data[idx * cols + c] - centroids[j * cols + c];
-      d += diff * diff;
+      atomicAdd(&sSums[(size_t)bestK * cols + c], data[idx * cols + c]);
     }
-    if (d < minDist) {
-      minDist = d;
-      bestK = (int)j;
-    }
-  }
+    atomicAdd(&sCounts[bestK], 1);
+    atomicAdd(sTotal, minDist);
+  } // einde calc
 
-  if (pointInCentroid[idx] != bestK) {
-    pointInCentroid[idx] = bestK;
-    // data race boeit nie want t'is toch ma T/F
-    *changed = true;
-  }
 
-  // maakt volgorde hier uit? idk chief
-  for (size_t c = 0; c < cols; c++) {
-    atomicAdd(&sums[(size_t)bestK * cols + c], data[idx * cols + c]);
-  }
-  atomicAdd(&counts[bestK], 1);
-  atomicAdd(sqDist, minDist);
+  __syncthreads();
+
+  // mergen van results
+
+  for (size_t i = threadIdx.x; i < k*cols; i += blockDim.x)
+    atomicAdd(&sums[i], sSums[i]);
+  for (size_t i = threadIdx.x; i < k; i += blockDim.x)
+    atomicAdd(&counts[i], sCounts[i]);
+
+  if (threadIdx.x == 0)
+    atomicAdd(sqDist, *sTotal);
 }
 
 // __global__ void updateCentroids(double *centroids, double *sums, int *counts,
@@ -215,6 +246,8 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
 
   CUDA_CHECK(cudaEventRecord(startAllEvt));
 
+  size_t sharedMem = (2 * numClusters * datafmt.cols + 1) * sizeof(double) + numClusters *sizeof(int);
+
   for (int r = 0; r < repetitions; r++) {
     // start anew & push to gpu for each rep
     initCentroids(rng, centroids, allData, datafmt);
@@ -238,7 +271,7 @@ int kmeansCUDA(Rng &rng, const std::string &inputFile,
       //   std::cout << "Before" << std::endl;
       //   debugCentroids(centroids, datafmt);
       // }
-      assignPtsToCentroids<<<blocks, threads>>>(
+      assignPtsToCentroids<<<blocks, threads, sharedMem>>>(
           pdata, pcentroids, pPointToCentroid, psums, pcounts, psqDist,
           datafmt.rows, datafmt.cols, numClusters, pchanged);
       updateCentroids<<<1, numClusters>>>(pcentroids, psums, pcounts,

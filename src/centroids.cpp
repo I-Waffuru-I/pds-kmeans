@@ -15,10 +15,10 @@ void initCentroids(Rng &rng, std::vector<double> &centroids,
 	}
 
 	rng.pickRandomIndices(dsize.rows, centroid_indices);
-	for (int i = 0; i < ccount; i++)
+	for (size_t i = 0; i < ccount; i++)
 	{
 		size_t row = centroid_indices[i];
-		for (int e = 0; e < dsize.cols; e++)
+		for (size_t e = 0; e < dsize.cols; e++)
 		{
 			centroids[i * dsize.cols + e] = allData[row * dsize.cols + e];
 		}
@@ -30,7 +30,7 @@ void debugCentroids(std::vector<double> &centroids, DataSize &size)
 	std::cout << "debug centroid: " << std::endl;
 	for (size_t r = 0; r < centroids.size() / size.cols; r++)
 	{
-		for (int c = 0; c < size.cols; c++)
+		for (size_t c = 0; c < size.cols; c++)
 		{
 			std::cout << centroids[r * size.cols + c] << ", ";
 		}
